@@ -1,0 +1,179 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// --- Identity & Tenancy ---
+
+model Tenant {
+  id        String   @id @default(uuid())
+  name      String
+  plan      String   @default("free") // free, pro, enterprise
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users      User[]
+  warehouses Warehouse[]
+  products   Product[]
+  orders     Order[]
+  vehicles   Vehicle[]
+  drivers    Driver[]
+
+  @@map("tenants")
+}
+
+// Extend existing User model
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  password     String
+  roles        String[] @default(["user"]) // admin, manager, driver
+  refreshToken String?
+  
+  // Multi-Tenancy
+  tenantId     String?
+  tenant       Tenant?  @relation(fields: [tenantId], references: [id])
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("users")
+}
+
+// --- Logistics Core ---
+
+model Warehouse {
+  id        String   @id @default(uuid())
+  name      String
+  location  String
+  capacity  Int      @default(0)
+  
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  
+  inventory Inventory[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("warehouses")
+}
+
+model Product {
+  id          String   @id @default(uuid())
+  sku         String   
+  name        String
+  description String?
+  
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+  
+  inventory   Inventory[]
+  orderItems  OrderItem[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([tenantId, sku]) // Unique SKU per tenant
+  @@map("products")
+}
+
+model Inventory {
+  id          String    @id @default(uuid())
+  quantity    Int
+  
+  warehouseId String
+  warehouse   Warehouse @relation(fields: [warehouseId], references: [id])
+  
+  productId   String
+  product     Product   @relation(fields: [productId], references: [id])
+
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([warehouseId, productId])
+  @@map("inventory")
+}
+
+// --- Operations ---
+
+model Order {
+  id           String      @id @default(uuid())
+  customerName String
+  status       String      @default("pending") // pending, processing, shipped, delivered
+  
+  tenantId     String
+  tenant       Tenant      @relation(fields: [tenantId], references: [id])
+  
+  items        OrderItem[]
+  shipment     Shipment?
+
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  @@map("orders")
+}
+
+model OrderItem {
+  id        String  @id @default(uuid())
+  quantity  Int
+  
+  orderId   String
+  order     Order   @relation(fields: [orderId], references: [id])
+  
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+
+  @@map("order_items")
+}
+
+model Shipment {
+  id             String   @id @default(uuid())
+  trackingNumber String   @unique
+  status         String   @default("assigned") // assigned, in_transit, delivered
+  
+  orderId        String   @unique
+  order          Order    @relation(fields: [orderId], references: [id])
+  
+  vehicleId      String?
+  vehicle        Vehicle? @relation(fields: [vehicleId], references: [id])
+  
+  driverId       String?
+  driver         Driver?  @relation(fields: [driverId], references: [id])
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@map("shipments")
+}
+
+// --- Fleet ---
+
+model Vehicle {
+  id           String     @id @default(uuid())
+  plateNumber  String
+  type         String     // truck, van, bike
+  
+  tenantId     String
+  tenant       Tenant     @relation(fields: [tenantId], references: [id])
+  
+  shipments    Shipment[]
+
+  @@map("vehicles")
+}
+
+model Driver {
+  id           String     @id @default(uuid())
+  name         String
+  license      String
+  
+  tenantId     String
+  tenant       Tenant     @relation(fields: [tenantId], references: [id])
+  
+  shipments    Shipment[]
+
+  @@map("drivers")
+}
