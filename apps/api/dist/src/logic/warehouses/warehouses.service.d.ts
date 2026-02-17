@@ -6,10 +6,10 @@ export declare class WarehousesService {
     constructor(prisma: PrismaService);
     create(createWarehouseDto: CreateWarehouseDto): import("@prisma/client").Prisma.Prisma__WarehouseClient<{
         id: string;
+        name: string;
         tenantId: string;
         createdAt: Date;
         updatedAt: Date;
-        name: string;
         location: string;
         lat: number | null;
         lng: number | null;
@@ -18,17 +18,17 @@ export declare class WarehousesService {
     findAll(): import("@prisma/client").Prisma.PrismaPromise<({
         tenant: {
             id: string;
+            name: string;
             createdAt: Date;
             updatedAt: Date;
-            name: string;
             plan: string;
         };
     } & {
         id: string;
+        name: string;
         tenantId: string;
         createdAt: Date;
         updatedAt: Date;
-        name: string;
         location: string;
         lat: number | null;
         lng: number | null;
@@ -37,9 +37,9 @@ export declare class WarehousesService {
     findOne(id: string): import("@prisma/client").Prisma.Prisma__WarehouseClient<({
         tenant: {
             id: string;
+            name: string;
             createdAt: Date;
             updatedAt: Date;
-            name: string;
             plan: string;
         };
         inventory: {
@@ -52,10 +52,10 @@ export declare class WarehousesService {
         }[];
     } & {
         id: string;
+        name: string;
         tenantId: string;
         createdAt: Date;
         updatedAt: Date;
-        name: string;
         location: string;
         lat: number | null;
         lng: number | null;
@@ -63,10 +63,10 @@ export declare class WarehousesService {
     }) | null, null, import("@prisma/client/runtime/library").DefaultArgs, import("@prisma/client").Prisma.PrismaClientOptions>;
     update(id: string, updateWarehouseDto: UpdateWarehouseDto): import("@prisma/client").Prisma.Prisma__WarehouseClient<{
         id: string;
+        name: string;
         tenantId: string;
         createdAt: Date;
         updatedAt: Date;
-        name: string;
         location: string;
         lat: number | null;
         lng: number | null;
@@ -74,10 +74,10 @@ export declare class WarehousesService {
     }, never, import("@prisma/client/runtime/library").DefaultArgs, import("@prisma/client").Prisma.PrismaClientOptions>;
     remove(id: string): import("@prisma/client").Prisma.Prisma__WarehouseClient<{
         id: string;
+        name: string;
         tenantId: string;
         createdAt: Date;
         updatedAt: Date;
-        name: string;
         location: string;
         lat: number | null;
         lng: number | null;

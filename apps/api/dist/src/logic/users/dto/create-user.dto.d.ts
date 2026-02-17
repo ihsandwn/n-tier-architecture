@@ -1,6 +1,8 @@
 export declare class CreateUserDto {
     email: string;
     password: string;
-    roles?: string[];
+    name?: string;
+    phone?: string;
+    roleIds?: string[];
     tenantId?: string;
 }

@@ -10,11 +10,12 @@ import { InventoryModule } from './inventory/inventory.module';
 import { OrdersModule } from './orders/orders.module';
 import { LogisticsModule } from './logistics/logistics.module';
 import { AnalyticsModule } from './analytics/analytics.module';
+import { NotificationsModule } from './notifications/notifications.module';
 
 @Module({
-    imports: [DataModule, UsersModule, AuthModule, TenantsModule, WarehousesModule, ProductsModule, InventoryModule, OrdersModule, LogisticsModule, AnalyticsModule],
+    imports: [DataModule, UsersModule, AuthModule, TenantsModule, WarehousesModule, ProductsModule, InventoryModule, OrdersModule, LogisticsModule, AnalyticsModule, NotificationsModule],
     providers: [],
-    exports: [],
+    exports: [NotificationsModule],
 })
 export class LogicModule { }
 

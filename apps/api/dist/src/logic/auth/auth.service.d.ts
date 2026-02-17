@@ -12,6 +12,7 @@ export declare class AuthService {
             id: any;
             email: any;
             roles: any;
+            permissions: unknown[];
             tenantId: any;
         };
     }>;
@@ -21,6 +22,7 @@ export declare class AuthService {
             id: any;
             email: any;
             roles: any;
+            permissions: unknown[];
             tenantId: any;
         };
     }>;
@@ -30,6 +32,7 @@ export declare class AuthService {
             id: any;
             email: any;
             roles: any;
+            permissions: unknown[];
             tenantId: any;
         };
     }>;

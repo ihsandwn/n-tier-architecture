@@ -23,6 +23,7 @@ This repository uses a **Monorepo** structure managed by **TurboRepo**.
 ### Key Features
 *   **Multi-Tenancy:** Data isolation via `tenantId`.
 *   **RBAC:** Role-Based Access Control (Admin, Manager, User).
+*   **Real-time Notifications:** Persistent alerts via WebSockets (Socket.io).
 *   **Strict Typing:** Shared DTOs and Logic.
 *   **DevOps:** Docker Orchestration & Nginx Reverse Proxy.
 

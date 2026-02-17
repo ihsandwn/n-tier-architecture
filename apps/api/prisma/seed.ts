@@ -7,13 +7,18 @@ const prisma = new PrismaClient();
 async function main() {
     console.log('🌱 Starting comprehensive seeding...');
 
-    // 0. Clean up existing data (optional, but good for reset)
-    // await prisma.transaction.deleteMany();
-    // await prisma.inventory.deleteMany();
-    // await prisma.product.deleteMany();
-    // await prisma.warehouse.deleteMany();
-    // await prisma.user.deleteMany();
-    // await prisma.tenant.deleteMany();
+    // 0. Clean up existing data (correct order to avoid FK issues)
+    await prisma.shipment.deleteMany();
+    await prisma.orderItem.deleteMany();
+    await prisma.order.deleteMany();
+    await prisma.inventoryTransaction.deleteMany();
+    await prisma.inventory.deleteMany();
+    await prisma.product.deleteMany();
+    await prisma.warehouse.deleteMany();
+    await prisma.vehicle.deleteMany();
+    await prisma.driver.deleteMany();
+    await prisma.user.deleteMany();
+    await prisma.tenant.deleteMany();
 
     // 1. Create Default Tenant
     // Use a fixed valid UUID for the default tenant to ensure consistency
@@ -30,43 +35,137 @@ async function main() {
     });
     console.log(`✅ Tenant created: ${tenant.name}`);
 
-    // 2. Create Users
+    // 2. Create Permissions
+    const permissionNames = [
+        'users:read', 'users:write', 'users:delete',
+        'roles:read', 'roles:write', 'roles:delete',
+        'inventory:read', 'inventory:write', 'inventory:adjust',
+        'analytics:read',
+        'warehouses:read', 'warehouses:write',
+        'products:read', 'products:write',
+        'orders:read', 'orders:write', 'orders:delete',
+        'fleet:read', 'fleet:write', 'fleet:delete',
+        'tenants:read', 'tenants:write'
+    ];
+
+    const permissions = [];
+    for (const name of permissionNames) {
+        const p = await prisma.permission.upsert({
+            where: { name },
+            update: {},
+            create: { name, description: `Can ${name.replace(':', ' ')}` }
+        });
+        permissions.push(p);
+    }
+    console.log(`✅ Created ${permissions.length} permissions`);
+
+    // 3. Create Roles
+    const adminRole = await prisma.role.upsert({
+        where: { name: 'admin' },
+        update: {
+            permissions: { set: permissions.map(p => ({ id: p.id })) }
+        },
+        create: {
+            name: 'admin',
+            description: 'System Administrator with full access',
+            permissions: { connect: permissions.map(p => ({ id: p.id })) }
+        }
+    });
+
+    const managerRole = await prisma.role.upsert({
+        where: { name: 'manager' },
+        update: {
+            permissions: {
+                set: permissions
+                    .filter(p => p.name.startsWith('inventory') || p.name.startsWith('products') || p.name.startsWith('analytics') || p.name === 'warehouses:read')
+                    .map(p => ({ id: p.id }))
+            }
+        },
+        create: {
+            name: 'manager',
+            description: 'Operations Manager',
+            permissions: {
+                connect: permissions
+                    .filter(p => p.name.startsWith('inventory') || p.name.startsWith('products') || p.name.startsWith('analytics') || p.name === 'warehouses:read')
+                    .map(p => ({ id: p.id }))
+            }
+        }
+    });
+
+    const userRole = await prisma.role.upsert({
+        where: { name: 'user' },
+        update: {
+            permissions: {
+                set: permissions
+                    .filter(p => p.name.endsWith(':read'))
+                    .map(p => ({ id: p.id }))
+            }
+        },
+        create: {
+            name: 'user',
+            description: 'Standard User with read-only access',
+            permissions: {
+                connect: permissions
+                    .filter(p => p.name.endsWith(':read'))
+                    .map(p => ({ id: p.id }))
+            }
+        }
+    });
+    console.log('✅ Created default roles (admin, manager, user)');
+
+    // 4. Create Users
     const passwordHash = await bcrypt.hash('password123', 10);
 
-    const admin = await prisma.user.upsert({
+    const adminUser = await prisma.user.upsert({
         where: { email: 'admin@example.com' },
-        update: {},
+        update: {
+            name: 'System Admin',
+            phone: '+1234567890',
+            roles: { set: [{ id: adminRole.id }] }
+        } as any,
         create: {
             email: 'admin@example.com',
             password: passwordHash,
-            roles: ['admin'],
+            name: 'System Admin',
+            phone: '+1234567890',
             tenantId: tenant.id,
-        },
+            roles: { connect: [{ id: adminRole.id }] }
+        } as any,
     });
-    console.log(`✅ Admin user created: ${admin.email}`);
+    console.log(`✅ Admin user created: ${adminUser.email}`);
 
-    const manager = await prisma.user.upsert({
+    const managerUser = await prisma.user.upsert({
         where: { email: 'manager@example.com' },
-        update: {},
+        update: {
+            name: 'Operations Manager',
+            phone: '+1987654321',
+            roles: { set: [{ id: managerRole.id }] }
+        } as any,
         create: {
             email: 'manager@example.com',
             password: passwordHash,
-            roles: ['manager'],
+            name: 'Operations Manager',
+            phone: '+1987654321',
             tenantId: tenant.id,
-        },
+            roles: { connect: [{ id: managerRole.id }] }
+        } as any,
     });
-    console.log(`✅ Manager user created: ${manager.email}`);
+    console.log(`✅ Manager user created: ${managerUser.email}`);
 
     // Create 5 Staff Users
     for (let i = 0; i < 5; i++) {
-        const email = faker.internet.email();
+        const firstName = faker.person.firstName();
+        const lastName = faker.person.lastName();
+        const email = faker.internet.email({ firstName, lastName });
         await prisma.user.create({
             data: {
                 email,
                 password: passwordHash,
-                roles: ['user'],
-                tenantId: tenant.id
-            }
+                name: `${firstName} ${lastName}`,
+                phone: faker.phone.number(),
+                tenantId: tenant.id,
+                roles: { connect: [{ id: userRole.id }] }
+            } as any
         });
     }
     console.log('✅ Created 5 random staff users');
@@ -104,11 +203,9 @@ async function main() {
     console.log(`✅ Created ${warehouses.length} warehouses`);
 
     // 4. Create Products
-    const products = [];
+    const products: any[] = [];
     for (let i = 0; i < 50; i++) {
-        // Products have a unique constraint on [tenantId, sku]
         const sku = faker.commerce.isbn();
-
         let product = await prisma.product.findFirst({
             where: { sku, tenantId: tenant.id }
         });
@@ -128,49 +225,160 @@ async function main() {
     }
     console.log(`✅ Created ${products.length} products`);
 
-    // 5. Create Inventory & Transactions
-    console.log('🌱 Generating inventory and transactions...');
+    // 5. Create Inventory & Initial 'IN' Transactions
+    console.log('🌱 Generating initial inventory...');
     for (const warehouse of warehouses) {
         for (const product of products) {
-            // Randomly assign inventory
+            // Randomly assign inventory (70% chance)
             if (Math.random() > 0.3) {
-                const quantity = faker.number.int({ min: 10, max: 500 });
+                const quantity = faker.number.int({ min: 50, max: 1000 });
 
-                // Check if inventory exists
-                let inventory = await prisma.inventory.findUnique({
-                    where: {
-                        warehouseId_productId: {
-                            warehouseId: warehouse.id,
-                            productId: product.id
-                        }
+                const inventory = await prisma.inventory.create({
+                    data: {
+                        productId: product.id,
+                        warehouseId: warehouse.id,
+                        quantity: quantity,
+                        tenantId: tenant.id
                     }
                 });
 
-                if (!inventory) {
-                    inventory = await prisma.inventory.create({
-                        data: {
-                            productId: product.id,
-                            warehouseId: warehouse.id,
-                            quantity: quantity,
-                            tenantId: tenant.id
-                        }
-                    });
+                // Create initial transaction log
+                await prisma.inventoryTransaction.create({
+                    data: {
+                        inventoryId: inventory.id,
+                        type: 'IN',
+                        quantity: quantity,
+                        userId: adminUser.id,
+                        tenantId: tenant.id,
+                        note: 'Initial stock seeding',
+                        createdAt: faker.date.recent({ days: 30 })
+                    }
+                });
+            }
+        }
+    }
+    console.log('✅ Initial inventory and transactions created');
 
-                    // Create initial transaction log
+    // 6. Create Vehicles
+    const vehicleTypes = ['Truck', 'Van', 'Bike'];
+    const vehicles = [];
+    for (let i = 0; i < 10; i++) {
+        const type = faker.helpers.arrayElement(vehicleTypes);
+        const vehicle = await prisma.vehicle.create({
+            data: {
+                plateNumber: `${faker.string.alpha({ length: 2, casing: 'upper' })} ${faker.number.int({ min: 1000, max: 9999 })} ${faker.string.alpha({ length: 2, casing: 'upper' })}`,
+                type: type.toLowerCase(),
+                tenantId: tenant.id
+            }
+        });
+        vehicles.push(vehicle);
+    }
+    console.log(`✅ Created ${vehicles.length} vehicles`);
+
+    // 7. Create Drivers
+    const drivers = [];
+    for (let i = 0; i < 15; i++) {
+        const driver = await prisma.driver.create({
+            data: {
+                name: faker.person.fullName(),
+                license: faker.string.alphanumeric({ length: 10, casing: 'upper' }),
+                tenantId: tenant.id
+            }
+        });
+        drivers.push(driver);
+    }
+    console.log(`✅ Created ${drivers.length} drivers`);
+
+    // 8. Create Orders & Shipments
+    console.log('🌱 Generating orders and shipments...');
+    for (let i = 0; i < 30; i++) {
+        const status = faker.helpers.arrayElement(['pending', 'processing', 'shipped', 'delivered']);
+
+        // Create Order
+        const order = await prisma.order.create({
+            data: {
+                customerName: faker.person.fullName(),
+                status: status,
+                tenantId: tenant.id,
+                items: {
+                    create: Array.from({ length: faker.number.int({ min: 1, max: 5 }) }).map(() => ({
+                        productId: faker.helpers.arrayElement(products).id,
+                        quantity: faker.number.int({ min: 1, max: 10 })
+                    }))
+                }
+            },
+            include: { items: true }
+        });
+
+        // If shipped or delivered, create a Shipment
+        if (['shipped', 'delivered'].includes(status)) {
+            const shipment = await prisma.shipment.create({
+                data: {
+                    trackingNumber: `TRK${faker.string.numeric(10)}`,
+                    status: status === 'delivered' ? 'delivered' : 'in_transit',
+                    orderId: order.id,
+                    vehicleId: faker.helpers.arrayElement(vehicles).id,
+                    driverId: faker.helpers.arrayElement(drivers).id
+                }
+            });
+
+            // For each item in order, record an 'OUT' transaction
+            for (const item of order.items) {
+                // Find a warehouse that has this product
+                const inventory = await prisma.inventory.findFirst({
+                    where: { productId: item.productId, tenantId: tenant.id }
+                });
+
+                if (inventory) {
                     await prisma.inventoryTransaction.create({
                         data: {
                             inventoryId: inventory.id,
-                            type: 'IN',
-                            quantity: quantity,
-                            userId: admin.id,
+                            type: 'OUT',
+                            quantity: item.quantity,
+                            userId: adminUser.id,
                             tenantId: tenant.id,
-                            createdAt: faker.date.recent({ days: 30 })
+                            note: `Order ${order.id.slice(0, 8)} shipment`,
+                            createdAt: order.createdAt
                         }
+                    });
+
+                    // Update inventory quantity
+                    await prisma.inventory.update({
+                        where: { id: inventory.id },
+                        data: { quantity: { decrement: item.quantity } }
                     });
                 }
             }
         }
     }
+
+    // 9. Create Mock Notifications
+    console.log('🌱 Seeding mock notifications...');
+    const notificationData = [
+        { title: 'System Updated', message: 'N-Tier Architecture core modules have been refreshed.', type: 'SUCCESS' },
+        { title: 'Inventory Alert', message: 'SKU #8821 is running low in JFK Hub.', type: 'WARNING' },
+        { title: 'New Security Rule', message: 'Admin protection logic is now active.', type: 'INFO' },
+        { title: 'Database Backup', message: 'Nightly backup completed successfully.', type: 'SUCCESS' }
+    ];
+
+    for (const notif of notificationData) {
+        await (prisma as any).notification.create({
+            data: {
+                userId: adminUser.id,
+                ...notif,
+                createdAt: faker.date.recent({ days: 7 })
+            }
+        });
+    }
+
+    await (prisma as any).notification.create({
+        data: {
+            userId: managerUser.id,
+            title: 'Welcome Manager',
+            message: 'You now have access to the Inventory Dashboard.',
+            type: 'SUCCESS'
+        }
+    });
 
     console.log('✅ Seeding finished.');
 }

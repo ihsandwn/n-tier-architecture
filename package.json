@@ -10,8 +10,8 @@
     },
     "devDependencies": {
         "prettier": "latest",
-        "turbo": "latest",
-        "prisma": "6.19.2"
+        "prisma": "6.19.2",
+        "turbo": "latest"
     },
     "engines": {
         "node": ">=18"
@@ -21,7 +21,8 @@
         "packages/*"
     ],
     "dependencies": {
-        "@prisma/client": "^6.19.2"
+        "@prisma/client": "^6.19.2",
+        "xlsx": "^0.18.5"
     },
     "packageManager": "npm@11.6.4"
 }

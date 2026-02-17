@@ -38,8 +38,11 @@ let ProductsController = class ProductsController {
     update(id, updateProductDto) {
         return this.productsService.update(id, updateProductDto);
     }
-    remove(id) {
-        return this.productsService.remove(id);
+    remove(id, tenantId) {
+        return this.productsService.remove(id, tenantId);
+    }
+    import(body) {
+        return this.productsService.importProducts(body.tenantId, body.products);
     }
 };
 exports.ProductsController = ProductsController;
@@ -79,10 +82,19 @@ __decorate([
     (0, common_1.Delete)(':id'),
     (0, roles_decorator_1.Roles)(role_enum_1.Role.Admin),
     __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)('tenantId')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String]),
+    __metadata("design:paramtypes", [String, String]),
     __metadata("design:returntype", void 0)
 ], ProductsController.prototype, "remove", null);
+__decorate([
+    (0, common_1.Post)('import'),
+    (0, roles_decorator_1.Roles)(role_enum_1.Role.Admin, role_enum_1.Role.Manager),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", void 0)
+], ProductsController.prototype, "import", null);
 exports.ProductsController = ProductsController = __decorate([
     (0, common_1.Controller)('products'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),

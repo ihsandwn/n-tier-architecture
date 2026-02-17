@@ -5,6 +5,8 @@ import { usePathname } from 'next/navigation';
 import {
     LayoutDashboard,
     Users,
+    UserRound,
+    Building2,
     Warehouse,
     Package,
     Box,
@@ -24,14 +26,15 @@ import { useSidebar } from '@/context/sidebar-context';
 
 const navItems = [
     { name: 'Overview', href: '/dashboard', icon: LayoutDashboard },
-    { name: 'Analytics', href: '/dashboard/analytics', icon: PieChart },
-    { name: 'Tenants', href: '/dashboard/tenants', icon: Users, roles: ['admin'] },
-    { name: 'Warehouses', href: '/dashboard/warehouses', icon: Warehouse },
-    { name: 'Products', href: '/dashboard/products', icon: Package },
-    { name: 'Inventory', href: '/dashboard/inventory', icon: Box },
-    { name: 'Orders', href: '/dashboard/orders', icon: ShoppingCart },
-    { name: 'Fleet', href: '/dashboard/fleet', icon: Truck },
-    { name: 'RBAC & Roles', href: '/dashboard/roles', icon: Shield, roles: ['admin'] },
+    { name: 'Analytics', href: '/dashboard/analytics', icon: PieChart, permission: 'analytics:read' },
+    { name: 'Tenants', href: '/dashboard/tenants', icon: Building2, permission: 'tenants:read' },
+    { name: 'User Management', href: '/dashboard/users', icon: UserRound, permission: 'users:read' },
+    { name: 'Warehouses', href: '/dashboard/warehouses', icon: Warehouse, permission: 'warehouses:read' },
+    { name: 'Products', href: '/dashboard/products', icon: Package, permission: 'products:read' },
+    { name: 'Inventory', href: '/dashboard/inventory', icon: Box, permission: 'inventory:read' },
+    { name: 'Orders', href: '/dashboard/orders', icon: ShoppingCart, permission: 'orders:read' },
+    { name: 'Fleet', href: '/dashboard/fleet', icon: Truck, permission: 'fleet:read' },
+    { name: 'RBAC & Roles', href: '/dashboard/roles', icon: Shield, permission: 'roles:read' },
     { name: 'Settings', href: '/dashboard/settings', icon: Settings },
 ];
 
@@ -91,10 +94,17 @@ export default function DashboardSidebar() {
                 </div>
 
                 <div className="flex-1 overflow-y-auto py-4 space-y-1 overflow-x-hidden">
-                    {navItems.map((item) => {
+                    {navItems.map((item: any) => {
                         const isActive = pathname === item.href;
-                        // Skip if role doesn't match
-                        if (item.roles && user && !item.roles.some(r => user.roles.includes(r))) return null;
+
+                        // Permission-based Visibility Check
+                        if (item.permission && user) {
+                            const hasPermission = user.permissions?.includes(item.permission);
+                            if (!hasPermission) return null;
+                        }
+
+                        // Role-based Visibility Check (Fallback)
+                        if (item.roles && user && !item.roles.some((r: string) => user.roles.includes(r))) return null;
 
                         return (
                             <Link

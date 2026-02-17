@@ -63,13 +63,23 @@ let AuthService = class AuthService {
         return null;
     }
     async login(user) {
-        const payload = { email: user.email, sub: user.id, roles: user.roles, tenantId: user.tenantId };
+        const roleNames = user.roles?.map((r) => r.name) || [];
+        const permissions = user.roles?.flatMap((r) => r.permissions?.map((p) => p.name) || []) || [];
+        const uniquePermissions = [...new Set(permissions)];
+        const payload = {
+            email: user.email,
+            sub: user.id,
+            roles: roleNames,
+            permissions: uniquePermissions,
+            tenantId: user.tenantId
+        };
         return {
             access_token: this.jwtService.sign(payload),
             user: {
                 id: user.id,
                 email: user.email,
-                roles: user.roles,
+                roles: roleNames,
+                permissions: uniquePermissions,
                 tenantId: user.tenantId,
             }
         };
@@ -84,8 +94,8 @@ let AuthService = class AuthService {
             existingUser = await this.usersService.create({
                 email: user.email,
                 password: Math.random().toString(36).slice(-8),
-                roles: ['user'],
-                tenantId: 'default-tenant'
+                roleIds: [],
+                tenantId: undefined
             });
         }
         return this.login(existingUser);

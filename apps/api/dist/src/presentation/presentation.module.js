@@ -9,13 +9,14 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.PresentationModule = void 0;
 const common_1 = require("@nestjs/common");
 const logic_module_1 = require("../logic/logic.module");
+const notifications_controller_1 = require("./notifications.controller");
 let PresentationModule = class PresentationModule {
 };
 exports.PresentationModule = PresentationModule;
 exports.PresentationModule = PresentationModule = __decorate([
     (0, common_1.Module)({
         imports: [logic_module_1.LogicModule],
-        controllers: [],
+        controllers: [notifications_controller_1.NotificationsController],
         providers: [],
     })
 ], PresentationModule);

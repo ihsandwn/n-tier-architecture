@@ -14,6 +14,8 @@ interface DataTableProps<T> {
     data: T[];
     columns: Column<T>[];
     searchKey?: keyof T;
+    searchKeys?: (keyof T | string)[]; // Supports nested keys via custom logic or simple keys
+    customFilter?: (item: T) => boolean;
     onRowClick?: (row: T) => void;
     isLoading?: boolean;
 }
@@ -22,6 +24,8 @@ export function DataTable<T extends { id: string | number }>({
     data,
     columns,
     searchKey,
+    searchKeys,
+    customFilter,
     onRowClick,
     isLoading,
 }: DataTableProps<T>) {
@@ -32,11 +36,34 @@ export function DataTable<T extends { id: string | number }>({
 
     // Filter
     const filteredData = useMemo(() => {
-        if (!searchKey || !searchQuery) return data;
-        return data.filter(item =>
-            String(item[searchKey]).toLowerCase().includes(searchQuery.toLowerCase())
-        );
-    }, [data, searchKey, searchQuery]);
+        let result = data;
+
+        // Apply Search
+        if (searchQuery) {
+            const query = searchQuery.toLowerCase();
+            result = result.filter(item => {
+                if (searchKeys) {
+                    return searchKeys.some(key => {
+                        const value = typeof key === 'string' && key.includes('.')
+                            ? key.split('.').reduce((obj, k) => (obj as any)?.[k], item)
+                            : item[key as keyof T];
+                        return String(value || '').toLowerCase().includes(query);
+                    });
+                }
+                if (searchKey) {
+                    return String(item[searchKey] || '').toLowerCase().includes(query);
+                }
+                return true;
+            });
+        }
+
+        // Apply Custom Filter
+        if (customFilter) {
+            result = result.filter(customFilter);
+        }
+
+        return result;
+    }, [data, searchKey, searchKeys, searchQuery, customFilter]);
 
     // Sort
     const sortedData = useMemo(() => {

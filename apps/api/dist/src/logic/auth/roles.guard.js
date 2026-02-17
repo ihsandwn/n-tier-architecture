@@ -13,6 +13,7 @@ exports.RolesGuard = void 0;
 const common_1 = require("@nestjs/common");
 const core_1 = require("@nestjs/core");
 const roles_decorator_1 = require("./roles.decorator");
+const permissions_decorator_1 = require("./permissions.decorator");
 let RolesGuard = class RolesGuard {
     reflector;
     constructor(reflector) {
@@ -23,18 +24,30 @@ let RolesGuard = class RolesGuard {
             context.getHandler(),
             context.getClass(),
         ]);
-        if (!requiredRoles) {
+        const requiredPermissions = this.reflector.getAllAndOverride(permissions_decorator_1.PERMISSIONS_KEY, [
+            context.getHandler(),
+            context.getClass(),
+        ]);
+        if (!requiredRoles && !requiredPermissions) {
             return true;
         }
         const { user } = context.switchToHttp().getRequest();
-        if (!user || !user.roles) {
-            throw new common_1.ForbiddenException('User roles not found');
+        if (!user) {
+            throw new common_1.ForbiddenException('User not found');
         }
-        const hasRole = requiredRoles.some((role) => user.roles.includes(role));
-        if (!hasRole) {
-            throw new common_1.ForbiddenException('Insufficient permissions');
+        if (requiredRoles) {
+            const userRoles = user.roles || [];
+            const hasRole = requiredRoles.some((role) => userRoles.includes(role));
+            if (hasRole)
+                return true;
         }
-        return true;
+        if (requiredPermissions) {
+            const userPermissions = user.permissions || [];
+            const hasPermission = requiredPermissions.every((permission) => userPermissions.includes(permission));
+            if (hasPermission)
+                return true;
+        }
+        throw new common_1.ForbiddenException('Insufficient permissions');
     }
 };
 exports.RolesGuard = RolesGuard;

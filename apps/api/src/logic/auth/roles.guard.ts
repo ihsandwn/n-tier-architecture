@@ -2,35 +2,51 @@ import { Injectable, CanActivate, ExecutionContext, ForbiddenException } from '@
 import { Reflector } from '@nestjs/core';
 import { Role } from './role.enum';
 import { ROLES_KEY } from './roles.decorator';
+import { PERMISSIONS_KEY } from './permissions.decorator';
 
 @Injectable()
 export class RolesGuard implements CanActivate {
     constructor(private reflector: Reflector) { }
 
     canActivate(context: ExecutionContext): boolean {
+        // 1. Check for Roles
         const requiredRoles = this.reflector.getAllAndOverride<Role[]>(ROLES_KEY, [
             context.getHandler(),
             context.getClass(),
         ]);
 
-        if (!requiredRoles) {
+        // 2. Check for Permissions
+        const requiredPermissions = this.reflector.getAllAndOverride<string[]>(PERMISSIONS_KEY, [
+            context.getHandler(),
+            context.getClass(),
+        ]);
+
+        if (!requiredRoles && !requiredPermissions) {
             return true;
         }
 
         const { user } = context.switchToHttp().getRequest();
 
-        // Check if user exists (JWT guard should have verified this, but safe check)
-        if (!user || !user.roles) {
-            throw new ForbiddenException('User roles not found');
+        if (!user) {
+            throw new ForbiddenException('User not found');
         }
 
-        // Check if user has ANY of the required roles
-        const hasRole = requiredRoles.some((role) => user.roles.includes(role));
-
-        if (!hasRole) {
-            throw new ForbiddenException('Insufficient permissions');
+        // --- Role Check ---
+        if (requiredRoles) {
+            const userRoles = user.roles || [];
+            const hasRole = requiredRoles.some((role) => userRoles.includes(role));
+            if (hasRole) return true;
         }
 
-        return true;
+        // --- Permission Check ---
+        if (requiredPermissions) {
+            const userPermissions = user.permissions || [];
+            const hasPermission = requiredPermissions.every((permission) =>
+                userPermissions.includes(permission)
+            );
+            if (hasPermission) return true;
+        }
+
+        throw new ForbiddenException('Insufficient permissions');
     }
 }

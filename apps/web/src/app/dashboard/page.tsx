@@ -2,6 +2,7 @@
 
 import DashboardLayout from '@/components/layout/dashboard-layout';
 import { Package, Users, Warehouse, TrendingUp, DollarSign, Activity, ArrowUpRight } from 'lucide-react';
+import Link from 'next/link';
 import { motion } from 'framer-motion';
 
 const StatCard = ({ title, value, icon: Icon, color, trend }: any) => (
@@ -124,10 +125,10 @@ export default function Dashboard() {
                             </div>
                         ))}
                     </div>
-                    <button className="w-full mt-6 py-2 text-sm text-blue-600 font-medium hover:bg-blue-50 dark:hover:bg-blue-900/10 rounded-lg transition-colors flex items-center justify-center">
+                    <Link href="/dashboard/notifications" className="w-full mt-6 py-2 text-sm text-blue-600 font-medium hover:bg-blue-50 dark:hover:bg-blue-900/10 rounded-lg transition-colors flex items-center justify-center">
                         View All Activity
                         <ArrowUpRight className="w-4 h-4 ml-1" />
-                    </button>
+                    </Link>
                 </div>
             </div>
         </div>

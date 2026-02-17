@@ -10,14 +10,17 @@ exports.UsersModule = void 0;
 const common_1 = require("@nestjs/common");
 const users_service_1 = require("./users.service");
 const users_controller_1 = require("./users.controller");
+const roles_controller_1 = require("./roles.controller");
+const permissions_controller_1 = require("./permissions.controller");
 const data_module_1 = require("../../data/data.module");
+const notifications_module_1 = require("../notifications/notifications.module");
 let UsersModule = class UsersModule {
 };
 exports.UsersModule = UsersModule;
 exports.UsersModule = UsersModule = __decorate([
     (0, common_1.Module)({
-        imports: [data_module_1.DataModule],
-        controllers: [users_controller_1.UsersController],
+        imports: [data_module_1.DataModule, notifications_module_1.NotificationsModule],
+        controllers: [users_controller_1.UsersController, roles_controller_1.RolesController, permissions_controller_1.PermissionsController],
         providers: [users_service_1.UsersService],
         exports: [users_service_1.UsersService],
     })

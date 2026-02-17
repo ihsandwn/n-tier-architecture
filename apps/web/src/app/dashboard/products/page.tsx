@@ -6,6 +6,22 @@ import { DataTable, Column } from '@/components/ui/data-table';
 import { Plus, Package, MoreHorizontal, Edit, Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import ProductModal from '@/components/dashboard/product-modal';
+import ImportProductsModal from '@/components/dashboard/products/import-modal';
+import {
+    Search,
+    Filter,
+    ChevronDown,
+    ArrowUpDown,
+    Upload
+} from 'lucide-react';
+import { toast } from "sonner";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue
+} from '@/components/ui/select';
 
 const fetcher = (url: string) => api.get(url).then(res => res.data);
 
@@ -21,16 +37,34 @@ interface Product {
 export default function ProductsPage() {
     const { data: products, error, isLoading, mutate } = useSWR<Product[]>('/products', fetcher);
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isImportModalOpen, setIsImportModalOpen] = useState(false);
     const [selectedProduct, setSelectedProduct] = useState<Product | undefined>(undefined);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [priceFilter, setPriceFilter] = useState('all');
+    const [searchQuery, setSearchQuery] = useState('');
 
-    // Filter valid products (in case API returns wrapper object)
+    // Filter valid products and apply local filtering
     const productList = useMemo(() => {
-        if (Array.isArray(products)) return products;
-        // @ts-ignore
-        if (products?.data && Array.isArray(products.data)) return products.data;
-        return [];
-    }, [products]);
+        let list = Array.isArray(products) ? products : (products as any)?.data || [];
+
+        if (priceFilter !== 'all') {
+            const [min, max] = priceFilter.split('-').map(Number);
+            list = list.filter((p: Product) => {
+                if (max) return p.price >= min && p.price <= max;
+                return p.price >= min;
+            });
+        }
+
+        if (searchQuery) {
+            const query = searchQuery.toLowerCase();
+            list = list.filter((p: Product) =>
+                p.name.toLowerCase().includes(query) ||
+                p.sku.toLowerCase().includes(query)
+            );
+        }
+
+        return list;
+    }, [products, priceFilter, searchQuery]);
 
     const handleCreate = async (data: any) => {
         setIsSubmitting(true);
@@ -40,7 +74,9 @@ export default function ProductsPage() {
             setIsModalOpen(false);
         } catch (err) {
             console.error('Failed to create product:', err);
-            alert('Failed to create product. SKU might be duplicate.');
+            toast.error('Failed to create product', {
+                description: 'The SKU might already exist in the system.'
+            });
         } finally {
             setIsSubmitting(false);
         }
@@ -56,7 +92,7 @@ export default function ProductsPage() {
             setSelectedProduct(undefined);
         } catch (err) {
             console.error('Failed to update product:', err);
-            alert('Failed to update product');
+            toast.error('Failed to update product');
         } finally {
             setIsSubmitting(false);
         }
@@ -67,9 +103,10 @@ export default function ProductsPage() {
         try {
             await api.delete(`/products/${id}`);
             mutate();
+            toast.success('Product deleted successfully');
         } catch (err) {
             console.error('Failed to delete product:', err);
-            alert('Failed to delete product');
+            toast.error('Failed to delete product');
         }
     };
 
@@ -150,18 +187,55 @@ export default function ProductsPage() {
                     <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Products</h1>
                     <p className="text-gray-500 dark:text-gray-400">Manage your product catalog and inventory base.</p>
                 </div>
-                <button
-                    onClick={openCreateModal}
-                    disabled={isLoading}
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center disabled:opacity-50 disabled:cursor-wait"
-                >
-                    {isLoading ? (
-                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2"></div>
-                    ) : (
-                        <Plus className="w-4 h-4 mr-2" />
-                    )}
-                    Add Product
-                </button>
+                <div className="flex items-center gap-3">
+                    <button
+                        onClick={() => setIsImportModalOpen(true)}
+                        className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 px-4 py-2 rounded-xl text-sm font-bold transition-all hover:bg-gray-50 dark:hover:bg-gray-750 flex items-center"
+                    >
+                        <Upload className="w-4 h-4 mr-2 text-blue-600" />
+                        Import
+                    </button>
+                    <button
+                        onClick={openCreateModal}
+                        disabled={isLoading}
+                        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-sm font-bold transition-all shadow-lg shadow-blue-200 dark:shadow-none flex items-center disabled:opacity-50 disabled:cursor-wait"
+                    >
+                        {isLoading ? (
+                            <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2"></div>
+                        ) : (
+                            <Plus className="w-4 h-4 mr-2" />
+                        )}
+                        Add Product
+                    </button>
+                </div>
+            </div>
+
+            <div className="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-100 dark:border-gray-700 flex flex-col md:flex-row gap-4">
+                <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+                    <input
+                        type="text"
+                        placeholder="Search products by name or SKU..."
+                        className="w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 transition-all font-sans text-sm"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                    />
+                </div>
+
+                <div className="flex items-center space-x-3 md:w-64">
+                    <Select value={priceFilter} onValueChange={setPriceFilter}>
+                        <SelectTrigger className="bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-700 h-11 rounded-xl">
+                            <SelectValue placeholder="Price Range" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">All Prices</SelectItem>
+                            <SelectItem value="0-50">$0 - $50</SelectItem>
+                            <SelectItem value="50-200">$50 - $200</SelectItem>
+                            <SelectItem value="200-500">$200 - $500</SelectItem>
+                            <SelectItem value="500-999999">$500+</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
             </div>
 
             {isLoading ? (
@@ -173,16 +247,27 @@ export default function ProductsPage() {
                 <DataTable<Product>
                     data={productList}
                     columns={columns}
-                    searchKey="name"
+                    isLoading={isLoading}
                 />
             )}
 
-            <ProductModal
-                isOpen={isModalOpen}
-                onClose={() => setIsModalOpen(false)}
-                onSubmit={selectedProduct ? handleUpdate : handleCreate}
-                initialData={selectedProduct}
-                isSubmitting={isSubmitting}
+            {isModalOpen && (
+                <ProductModal
+                    isOpen={isModalOpen}
+                    onClose={() => {
+                        setIsModalOpen(false);
+                        setSelectedProduct(undefined);
+                    }}
+                    onSubmit={selectedProduct ? handleUpdate : handleCreate}
+                    initialData={selectedProduct}
+                    isSubmitting={isSubmitting}
+                />
+            )}
+
+            <ImportProductsModal
+                isOpen={isImportModalOpen}
+                onClose={() => setIsImportModalOpen(false)}
+                onSuccess={() => mutate()}
             />
         </div>
     );

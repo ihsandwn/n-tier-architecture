@@ -32,19 +32,56 @@ model User {
   id           String   @id @default(uuid()) @db.Uuid
   email        String   @unique
   password     String
-  roles        String[] @default(["user"]) // admin, manager, driver
   refreshToken String?
+  // Profile Information
+  name             String?
+  phone            String?
   
-  // Multi-Tenancy
+  // Security
+  twoFactorEnabled Boolean  @default(false)
+  twoFactorSecret  String?
+
   tenantId     String?  @db.Uuid
   tenant       Tenant?  @relation(fields: [tenantId], references: [id])
 
+  // RBAC
+  roles        Role[]   @relation("UserRoles")
+
+  notifications Notification[]
   transactions InventoryTransaction[]
 
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
+  @@index([tenantId])
   @@map("users")
+}
+
+model Role {
+  id          String       @id @default(uuid()) @db.Uuid
+  name        String       @unique
+  description String?
+  
+  permissions Permission[] @relation("RolePermissions")
+  users       User[]       @relation("UserRoles")
+
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@map("roles")
+}
+
+model Permission {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String   @unique // e.g., "users:read", "inventory:write"
+  description String?
+  
+  roles       Role[]   @relation("RolePermissions")
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("permissions")
 }
 
 // --- Logistics Core ---
@@ -65,6 +102,7 @@ model Warehouse {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([tenantId])
   @@map("warehouses")
 }
 
@@ -84,6 +122,7 @@ model Product {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  @@index([tenantId])
   @@unique([tenantId, sku]) // Unique SKU per tenant
   @@map("products")
 }
@@ -104,6 +143,9 @@ model Inventory {
 
   updatedAt   DateTime  @updatedAt
 
+  @@index([tenantId])
+  @@index([warehouseId])
+  @@index([productId])
   @@unique([warehouseId, productId])
   @@map("inventory")
 }
@@ -125,6 +167,9 @@ model InventoryTransaction {
 
   createdAt   DateTime @default(now())
 
+  @@index([tenantId])
+  @@index([inventoryId])
+  @@index([userId])
   @@map("inventory_transactions")
 }
 
@@ -144,6 +189,7 @@ model Order {
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
 
+  @@index([tenantId])
   @@map("orders")
 }
 
@@ -157,6 +203,8 @@ model OrderItem {
   productId String  @db.Uuid
   product   Product @relation(fields: [productId], references: [id])
 
+  @@index([orderId])
+  @@index([productId])
   @@map("order_items")
 }
 
@@ -177,6 +225,9 @@ model Shipment {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
+  @@index([orderId])
+  @@index([vehicleId])
+  @@index([driverId])
   @@map("shipments")
 }
 
@@ -192,6 +243,7 @@ model Vehicle {
   
   shipments    Shipment[]
 
+  @@index([tenantId])
   @@map("vehicles")
 }
 
@@ -205,5 +257,21 @@ model Driver {
   
   shipments    Shipment[]
 
+  @@index([tenantId])
   @@map("drivers")
+}
+
+model Notification {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  user      User     @relation(fields: [userId], references: [id])
+  type      String   // INFO, WARNING, SUCCESS, ERROR
+  title     String
+  message   String
+  isRead    Boolean  @default(false)
+  link      String?  // Optional navigation target
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@map("notifications")
 }

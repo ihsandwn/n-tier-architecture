@@ -38,7 +38,13 @@ export class ProductsController {
 
     @Delete(':id')
     @Roles(Role.Admin)
-    remove(@Param('id') id: string) {
-        return this.productsService.remove(id);
+    remove(@Param('id') id: string, @Body('tenantId') tenantId: string) {
+        return this.productsService.remove(id, tenantId);
+    }
+
+    @Post('import')
+    @Roles(Role.Admin, Role.Manager)
+    import(@Body() body: { tenantId: string, products: any[] }) {
+        return this.productsService.importProducts(body.tenantId, body.products);
     }
 }

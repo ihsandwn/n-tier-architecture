@@ -1,7 +1,7 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import { Warehouse as WarehouseIcon, MapPin, Box, ArrowRight, Plus, Edit, Trash2 } from 'lucide-react';
+import { Warehouse as WarehouseIcon, MapPin, Box, ArrowRight, Plus, Edit, Trash2, Search } from 'lucide-react';
 import useSWR from 'swr';
 import { api } from '@/lib/api';
 import Link from 'next/link';
@@ -31,13 +31,22 @@ export default function WarehousesPage() {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedWarehouse, setSelectedWarehouse] = useState<Warehouse | undefined>(undefined);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
 
     const warehouseList = useMemo(() => {
-        if (Array.isArray(warehouses)) return warehouses;
+        let rawList: Warehouse[] = [];
+        if (Array.isArray(warehouses)) rawList = warehouses;
         // @ts-ignore
-        if (warehouses?.data && Array.isArray(warehouses.data)) return warehouses.data;
-        return [];
-    }, [warehouses]);
+        else if (warehouses?.data && Array.isArray(warehouses.data)) rawList = warehouses.data;
+
+        if (!searchQuery) return rawList;
+
+        const query = searchQuery.toLowerCase();
+        return rawList.filter(w =>
+            w.name.toLowerCase().includes(query) ||
+            w.location.toLowerCase().includes(query)
+        );
+    }, [warehouses, searchQuery]);
 
     const handleCreate = async (data: any) => {
         setIsSubmitting(true);
@@ -103,14 +112,26 @@ export default function WarehousesPage() {
                     <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Warehouses</h1>
                     <p className="text-gray-500 dark:text-gray-400">View and manage your distribution centers.</p>
                 </div>
-                <button
-                    onClick={openCreateModal}
-                    disabled={isLoading}
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center disabled:opacity-50"
-                >
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add Warehouse
-                </button>
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <div className="flex-1 w-full relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+                        <input
+                            type="text"
+                            placeholder="Search warehouses by name or location..."
+                            className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 transition-all font-sans text-sm shadow-sm"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                        />
+                    </div>
+                    <button
+                        onClick={openCreateModal}
+                        disabled={isLoading}
+                        className="shrink-0 bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center disabled:opacity-50 shadow-lg shadow-blue-200 dark:shadow-none"
+                    >
+                        <Plus className="w-4 h-4 mr-2" />
+                        Add Warehouse
+                    </button>
+                </div>
             </div>
 
             {/* Map View */}

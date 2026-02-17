@@ -12,10 +12,13 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.ProductsService = void 0;
 const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("../../data/prisma/prisma.service");
+const notifications_service_1 = require("../notifications/notifications.service");
 let ProductsService = class ProductsService {
     prisma;
-    constructor(prisma) {
+    notificationsService;
+    constructor(prisma, notificationsService) {
         this.prisma = prisma;
+        this.notificationsService = notificationsService;
     }
     async create(createProductDto) {
         const existing = await this.prisma.product.findUnique({
@@ -55,15 +58,47 @@ let ProductsService = class ProductsService {
             data: updateProductDto,
         });
     }
-    remove(id) {
+    async remove(id, tenantId) {
         return this.prisma.product.delete({
-            where: { id },
+            where: { id, tenantId },
         });
+    }
+    async importProducts(tenantId, products) {
+        const results = await this.prisma.$transaction(async (tx) => {
+            const imported = [];
+            for (const item of products) {
+                const product = await tx.product.upsert({
+                    where: {
+                        tenantId_sku: {
+                            tenantId,
+                            sku: item.sku,
+                        },
+                    },
+                    update: {
+                        name: item.name,
+                        description: item.description,
+                        price: parseFloat(item.price) || 0,
+                    },
+                    create: {
+                        sku: item.sku,
+                        name: item.name,
+                        description: item.description,
+                        price: parseFloat(item.price) || 0,
+                        tenantId,
+                    },
+                });
+                imported.push(product);
+            }
+            return imported;
+        });
+        this.notificationsService.notifyDataChange(tenantId, 'PRODUCTS');
+        return results;
     }
 };
 exports.ProductsService = ProductsService;
 exports.ProductsService = ProductsService = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [prisma_service_1.PrismaService])
+    __metadata("design:paramtypes", [prisma_service_1.PrismaService,
+        notifications_service_1.NotificationsService])
 ], ProductsService);
 //# sourceMappingURL=products.service.js.map

@@ -5,20 +5,20 @@ export declare class DriversController {
     constructor(driversService: DriversService);
     create(req: any, createDriverDto: CreateDriverDto): Promise<{
         id: string;
-        tenantId: string;
         name: string;
+        tenantId: string;
         license: string;
     }>;
     findAll(req: any): Promise<{
         id: string;
-        tenantId: string;
         name: string;
+        tenantId: string;
         license: string;
     }[]>;
     remove(req: any, id: string): Promise<{
         id: string;
-        tenantId: string;
         name: string;
+        tenantId: string;
         license: string;
     }>;
 }

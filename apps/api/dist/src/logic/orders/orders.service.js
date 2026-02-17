@@ -13,10 +13,13 @@ exports.OrdersService = void 0;
 const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("../../data/prisma/prisma.service");
 const update_order_status_dto_1 = require("./dto/update-order-status.dto");
+const notifications_service_1 = require("../notifications/notifications.service");
 let OrdersService = class OrdersService {
     prisma;
-    constructor(prisma) {
+    notificationsService;
+    constructor(prisma, notificationsService) {
         this.prisma = prisma;
+        this.notificationsService = notificationsService;
     }
     async create(userId, tenantId, createOrderDto) {
         console.log('OrdersService.create started', { userId, tenantId });
@@ -72,6 +75,7 @@ let OrdersService = class OrdersService {
                     });
                 }
                 console.log('Transaction successful');
+                this.notificationsService.notifyDataChange(tenantId, 'ORDERS');
                 return order;
             });
         }
@@ -150,15 +154,18 @@ let OrdersService = class OrdersService {
                 return updatedOrder;
             });
         }
-        return this.prisma.order.update({
+        const updated = await this.prisma.order.update({
             where: { id },
             data: { status }
         });
+        this.notificationsService.notifyDataChange(tenantId, 'ORDERS');
+        return updated;
     }
 };
 exports.OrdersService = OrdersService;
 exports.OrdersService = OrdersService = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [prisma_service_1.PrismaService])
+    __metadata("design:paramtypes", [prisma_service_1.PrismaService,
+        notifications_service_1.NotificationsService])
 ], OrdersService);
 //# sourceMappingURL=orders.service.js.map

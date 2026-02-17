@@ -1,10 +1,14 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../data/prisma/prisma.service';
 import { UpdateStockDto } from './dto/update-stock.dto';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class InventoryService {
-    constructor(private readonly prisma: PrismaService) { }
+    constructor(
+        private readonly prisma: PrismaService,
+        private readonly notificationsService: NotificationsService
+    ) { }
 
     async updateStock(userId: string, tenantId: string, updateStockDto: UpdateStockDto) {
         const { warehouseId, productId, quantity, type, note } = updateStockDto;
@@ -74,6 +78,9 @@ export class InventoryService {
                     tenantId
                 }
             });
+
+            // Trigger real-time update
+            this.notificationsService.notifyDataChange(tenantId, 'INVENTORY');
 
             return updatedInventory;
         });

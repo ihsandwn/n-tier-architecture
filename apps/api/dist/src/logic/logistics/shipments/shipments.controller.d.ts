@@ -8,20 +8,12 @@ export declare class ShipmentsController {
         createdAt: Date;
         updatedAt: Date;
         status: string;
+        trackingNumber: string;
         orderId: string;
         vehicleId: string | null;
         driverId: string | null;
-        trackingNumber: string;
     }>;
     findAll(req: any): Promise<({
-        order: {
-            id: string;
-            tenantId: string;
-            createdAt: Date;
-            updatedAt: Date;
-            customerName: string;
-            status: string;
-        };
         vehicle: {
             id: string;
             tenantId: string;
@@ -30,18 +22,26 @@ export declare class ShipmentsController {
         } | null;
         driver: {
             id: string;
-            tenantId: string;
             name: string;
+            tenantId: string;
             license: string;
         } | null;
+        order: {
+            id: string;
+            tenantId: string;
+            createdAt: Date;
+            updatedAt: Date;
+            customerName: string;
+            status: string;
+        };
     } & {
         id: string;
         createdAt: Date;
         updatedAt: Date;
         status: string;
+        trackingNumber: string;
         orderId: string;
         vehicleId: string | null;
         driverId: string | null;
-        trackingNumber: string;
     })[]>;
 }

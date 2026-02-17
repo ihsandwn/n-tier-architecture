@@ -5,26 +5,26 @@ export declare class DriversService {
     constructor(prisma: PrismaService);
     create(tenantId: string, createDriverDto: CreateDriverDto): Promise<{
         id: string;
-        tenantId: string;
         name: string;
+        tenantId: string;
         license: string;
     }>;
     findAll(tenantId: string): Promise<{
         id: string;
-        tenantId: string;
         name: string;
+        tenantId: string;
         license: string;
     }[]>;
     findOne(id: string, tenantId: string): Promise<{
         id: string;
-        tenantId: string;
         name: string;
+        tenantId: string;
         license: string;
     }>;
     remove(id: string, tenantId: string): Promise<{
         id: string;
-        tenantId: string;
         name: string;
+        tenantId: string;
         license: string;
     }>;
 }

@@ -2,6 +2,7 @@
 
 import { api } from '@/lib/api';
 import useSWR from 'swr';
+import Link from 'next/link';
 import {
     BarChart3,
     TrendingUp,
@@ -16,7 +17,28 @@ import {
     Warehouse as WarehouseIcon
 } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue
+} from '@/components/ui/select';
+import {
+    Sheet,
+    SheetContent,
+    SheetDescription,
+    SheetHeader,
+    SheetTitle,
+    SheetTrigger,
+    SheetFooter,
+    SheetClose,
+} from '@/components/ui/sheet';
+import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 // Fetcher function
 const fetcher = (url: string) => api.get(url).then((res) => res.data);
@@ -57,8 +79,9 @@ const StatCard = ({ title, value, icon: Icon, color, trend, trendValue, delay }:
 );
 
 export default function AnalyticsPage() {
-    const { data: stats, isLoading: statsLoading } = useSWR('/analytics/dashboard', fetcher);
-    const { data: trends, isLoading: trendsLoading } = useSWR('/analytics/trends', fetcher);
+    const [timeRange, setTimeRange] = useState('6months');
+    const { data: stats, isLoading: statsLoading } = useSWR(`/analytics/dashboard?range=${timeRange}`, fetcher);
+    const { data: trends, isLoading: trendsLoading } = useSWR(`/analytics/trends?range=${timeRange}`, fetcher);
     const { data: health, isLoading: healthLoading } = useSWR('/analytics/inventory-health', fetcher);
 
     // Mock trend value logic for visual impact
@@ -115,14 +138,111 @@ export default function AnalyticsPage() {
                     <p className="text-gray-500 dark:text-gray-400 mt-1">Real-time performance metrics and operational analytics.</p>
                 </div>
                 <div className="flex items-center space-x-3">
-                    <button className="flex items-center px-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-                        <Calendar className="w-4 h-4 mr-2" />
-                        Last 6 Months
-                    </button>
-                    <button className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-xl text-sm font-medium hover:bg-blue-700 shadow-lg shadow-blue-500/20 transition-all">
-                        <Filter className="w-4 h-4 mr-2" />
-                        Filters
-                    </button>
+                    <Select value={timeRange} onValueChange={setTimeRange}>
+                        <SelectTrigger className="w-[180px] bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 rounded-xl shadow-sm">
+                            <div className="flex items-center">
+                                <Calendar className="w-4 h-4 mr-2 text-gray-400" />
+                                <SelectValue placeholder="Select Range" />
+                            </div>
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="7days">Last 7 Days</SelectItem>
+                            <SelectItem value="30days">Last 30 Days</SelectItem>
+                            <SelectItem value="6months">Last 6 Months</SelectItem>
+                            <SelectItem value="year">Last Year</SelectItem>
+                        </SelectContent>
+                    </Select>
+
+                    <Sheet>
+                        <SheetTrigger asChild>
+                            <button className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-xl text-sm font-bold hover:bg-blue-700 shadow-lg shadow-blue-500/20 active:scale-95 transition-all">
+                                <Filter className="w-4 h-4 mr-2" />
+                                Filters
+                            </button>
+                        </SheetTrigger>
+                        <SheetContent className="flex flex-col">
+                            <SheetHeader>
+                                <SheetTitle>Advanced Filters</SheetTitle>
+                                <SheetDescription>
+                                    Refine your business insights by category, region, or specific metrics.
+                                </SheetDescription>
+                            </SheetHeader>
+
+                            <div className="space-y-6 py-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="category">Product Category</Label>
+                                    <Select defaultValue="all">
+                                        <SelectTrigger id="category">
+                                            <SelectValue placeholder="Select Category" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">All Categories</SelectItem>
+                                            <SelectItem value="electronics">Electronics</SelectItem>
+                                            <SelectItem value="apparel">Apparel</SelectItem>
+                                            <SelectItem value="logistics">Logistics Services</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="region">Warehouse Region</Label>
+                                    <Select defaultValue="all">
+                                        <SelectTrigger id="region">
+                                            <SelectValue placeholder="Select Region" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">Global (All Regions)</SelectItem>
+                                            <SelectItem value="north">North Branch</SelectItem>
+                                            <SelectItem value="south">South Hub</SelectItem>
+                                            <SelectItem value="east">East Distribution</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="min-revenue">Minimum Revenue</Label>
+                                    <Input id="min-revenue" type="number" placeholder="0.00" />
+                                </div>
+
+                                <div className="flex items-center space-x-2 pt-4">
+                                    <div className="flex-1 h-px bg-gray-100 dark:bg-gray-800"></div>
+                                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Options</span>
+                                    <div className="flex-1 h-px bg-gray-100 dark:bg-gray-800"></div>
+                                </div>
+
+                                <div className="space-y-4 pt-2">
+                                    <label className="flex items-center space-x-3 cursor-pointer group">
+                                        <div className="w-5 h-5 rounded border border-gray-300 dark:border-gray-600 flex items-center justify-center group-hover:border-blue-500 transition-colors">
+                                            <div className="w-2.5 h-2.5 rounded-sm bg-blue-600 opacity-0 group-hover:opacity-20"></div>
+                                        </div>
+                                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Exclude internal transfers</span>
+                                    </label>
+                                    <label className="flex items-center space-x-3 cursor-pointer group">
+                                        <div className="w-5 h-5 rounded border border-gray-300 dark:border-gray-600 flex items-center justify-center group-hover:border-blue-500 transition-colors">
+                                            <div className="w-2.5 h-2.5 rounded-sm bg-blue-600 opacity-0 group-hover:opacity-20"></div>
+                                        </div>
+                                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Show prediction data</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <SheetFooter>
+                                <SheetClose asChild>
+                                    <Button variant="outline" className="flex-1 rounded-xl">Reset</Button>
+                                </SheetClose>
+                                <SheetClose asChild>
+                                    <Button
+                                        className="flex-1 rounded-xl bg-blue-600 hover:bg-blue-700"
+                                        onClick={() => toast.success('Advanced filters applied successfully!', {
+                                            description: 'Insights have been updated based on your criteria.'
+                                        })}
+                                    >
+                                        Apply Filters
+                                    </Button>
+                                </SheetClose>
+                            </SheetFooter>
+                        </SheetContent>
+                    </Sheet>
                 </div>
             </div>
 
@@ -207,8 +327,8 @@ export default function AnalyticsPage() {
                                             <span className="text-sm font-bold text-gray-700 dark:text-gray-200">{w.name}</span>
                                         </div>
                                         <span className={`text-xs font-bold px-2 py-0.5 rounded-md ${w.utilization > 80 ? 'bg-red-100 text-red-600 dark:bg-red-900/30' :
-                                                w.utilization > 50 ? 'bg-orange-100 text-orange-600 dark:bg-orange-900/30' :
-                                                    'bg-green-100 text-green-600 dark:bg-green-900/30'
+                                            w.utilization > 50 ? 'bg-orange-100 text-orange-600 dark:bg-orange-900/30' :
+                                                'bg-green-100 text-green-600 dark:bg-green-900/30'
                                             }`}>
                                             {Math.round(w.utilization)}%
                                         </span>
@@ -219,8 +339,8 @@ export default function AnalyticsPage() {
                                             animate={{ width: `${w.utilization}%` }}
                                             transition={{ duration: 1, delay: i * 0.2 }}
                                             className={`h-full rounded-full ${w.utilization > 80 ? 'bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.5)]' :
-                                                    w.utilization > 50 ? 'bg-orange-500 shadow-[0_0_10px_rgba(249,115,22,0.5)]' :
-                                                        'bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.5)]'
+                                                w.utilization > 50 ? 'bg-orange-500 shadow-[0_0_10px_rgba(249,115,22,0.5)]' :
+                                                    'bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.5)]'
                                                 }`}
                                         />
                                     </div>
@@ -239,10 +359,10 @@ export default function AnalyticsPage() {
                         )}
                     </div>
 
-                    <button className="w-full mt-8 py-3 bg-gray-50 dark:bg-gray-900/50 text-xs font-bold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl transition-all flex items-center justify-center group tracking-wide">
+                    <Link href="/dashboard/inventory" className="w-full mt-8 py-3 bg-gray-50 dark:bg-gray-900/50 text-xs font-bold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl transition-all flex items-center justify-center group tracking-wide">
                         View Detailed Inventory Report
                         <ArrowUpRight className="w-4 h-4 ml-2 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
-                    </button>
+                    </Link>
                 </div>
             </div>
         </div>

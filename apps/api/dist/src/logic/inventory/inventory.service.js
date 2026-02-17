@@ -12,10 +12,13 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.InventoryService = void 0;
 const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("../../data/prisma/prisma.service");
+const notifications_service_1 = require("../notifications/notifications.service");
 let InventoryService = class InventoryService {
     prisma;
-    constructor(prisma) {
+    notificationsService;
+    constructor(prisma, notificationsService) {
         this.prisma = prisma;
+        this.notificationsService = notificationsService;
     }
     async updateStock(userId, tenantId, updateStockDto) {
         const { warehouseId, productId, quantity, type, note } = updateStockDto;
@@ -64,6 +67,7 @@ let InventoryService = class InventoryService {
                     tenantId
                 }
             });
+            this.notificationsService.notifyDataChange(tenantId, 'INVENTORY');
             return updatedInventory;
         });
     }
@@ -96,6 +100,7 @@ let InventoryService = class InventoryService {
 exports.InventoryService = InventoryService;
 exports.InventoryService = InventoryService = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [prisma_service_1.PrismaService])
+    __metadata("design:paramtypes", [prisma_service_1.PrismaService,
+        notifications_service_1.NotificationsService])
 ], InventoryService);
 //# sourceMappingURL=inventory.service.js.map

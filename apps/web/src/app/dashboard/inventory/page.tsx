@@ -4,8 +4,26 @@ import { useState, useMemo } from 'react';
 import useSWR from 'swr';
 import { api } from '@/lib/api';
 import { DataTable, Column } from '@/components/ui/data-table';
-import { Package, Warehouse as WarehouseIcon, AlertTriangle, ArrowLeftRight } from 'lucide-react';
+import {
+    Plus,
+    Search,
+    Warehouse as WarehouseIcon,
+    Edit,
+    Trash2,
+    ArrowUpRight,
+    AlertTriangle,
+    CheckCircle2,
+    ArrowLeftRight
+} from 'lucide-react';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue
+} from '@/components/ui/select';
 import StockAdjustmentModal from '@/components/dashboard/inventory/stock-adjustment-modal';
+import clsx from 'clsx';
 
 
 const fetcher = (url: string) => api.get(url).then(res => res.data);
@@ -31,6 +49,7 @@ interface Warehouse {
 export default function InventoryPage() {
     const { data: warehouses, isLoading: isLoadingWarehouses } = useSWR<Warehouse[]>('/warehouses', fetcher);
     const [selectedWarehouseId, setSelectedWarehouseId] = useState<string>('');
+    const [showLowStockOnly, setShowLowStockOnly] = useState(false);
 
     // Select first warehouse by default when loaded
     useMemo(() => {
@@ -148,25 +167,44 @@ export default function InventoryPage() {
                 </div>
 
                 {/* Warehouse Selector */}
-                <div className="flex items-center space-x-3 bg-white dark:bg-gray-800 p-2 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 relative">
-                    <div className="bg-blue-100 dark:bg-blue-900/30 p-2 rounded-lg text-blue-600 dark:text-blue-400">
-                        <WarehouseIcon className="w-5 h-5" />
-                    </div>
-                    <select
+                <div className="flex items-center space-x-4">
+                    <Select
                         value={selectedWarehouseId}
-                        onChange={(e) => setSelectedWarehouseId(e.target.value)}
-                        className="bg-transparent border-none outline-none text-sm font-medium text-gray-900 dark:text-gray-200 min-w-[200px] cursor-pointer"
+                        onValueChange={setSelectedWarehouseId}
                         disabled={isLoadingWarehouses}
                     >
-                        {isLoadingWarehouses && <option>Loading warehouses...</option>}
-                        {warehouses?.map(w => (
-                            <option key={w.id} value={w.id}>{w.name}</option>
-                        ))}
-                    </select>
-                    {isLoadingInventory && (
-                        <div className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 border-2 border-blue-600/30 border-t-blue-600 rounded-full animate-spin"></div>
-                    )}
+                        <SelectTrigger className="min-w-[240px] bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 h-12 shadow-sm rounded-xl [&>span]:flex [&>span]:items-center">
+                            <div className="bg-blue-50 dark:bg-blue-900/20 p-1.5 rounded-lg text-blue-600 dark:text-blue-400 mr-2">
+                                <WarehouseIcon className="w-4 h-4" />
+                            </div>
+                            <SelectValue placeholder="Select Warehouse" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {warehouses?.map(w => (
+                                <SelectItem key={w.id} value={w.id}>
+                                    <div className="flex items-center">
+                                        <div className="w-2 h-2 rounded-full bg-green-500 mr-2"></div>
+                                        {w.name}
+                                    </div>
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
                 </div>
+
+                {/* Low Stock Toggle */}
+                <button
+                    onClick={() => setShowLowStockOnly(!showLowStockOnly)}
+                    className={clsx(
+                        "flex items-center space-x-2 px-4 py-2 rounded-xl border transition-all font-medium text-sm",
+                        showLowStockOnly
+                            ? "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 shadow-sm shadow-red-100 dark:shadow-none"
+                            : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-750"
+                    )}
+                >
+                    <AlertTriangle className={clsx("w-4 h-4", showLowStockOnly ? "animate-pulse" : "opacity-50")} />
+                    <span>Low Stock Only</span>
+                </button>
             </div>
 
             {/* Inventory Table */}
@@ -185,7 +223,8 @@ export default function InventoryPage() {
                 <DataTable<InventoryItem>
                     data={inventory || []}
                     columns={columns}
-                    searchKey="sku" // Simple search by SKU for now, could be product name if flattened
+                    searchKeys={['sku', 'product.name']}
+                    customFilter={(item) => !showLowStockOnly || item.quantity < 10}
                 />
             )}
 

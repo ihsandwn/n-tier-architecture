@@ -14,10 +14,10 @@ export declare class InventoryController {
     getWarehouseInventory(warehouseId: string): Promise<({
         product: {
             id: string;
+            name: string;
             tenantId: string;
             createdAt: Date;
             updatedAt: Date;
-            name: string;
             sku: string;
             description: string | null;
             price: number;

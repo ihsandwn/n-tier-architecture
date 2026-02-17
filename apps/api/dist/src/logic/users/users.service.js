@@ -45,34 +45,63 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.UsersService = void 0;
 const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("../../data/prisma/prisma.service");
+const notifications_service_1 = require("../notifications/notifications.service");
 const bcrypt = __importStar(require("bcrypt"));
 let UsersService = class UsersService {
     prisma;
-    constructor(prisma) {
+    notificationsService;
+    constructor(prisma, notificationsService) {
         this.prisma = prisma;
+        this.notificationsService = notificationsService;
     }
     async create(createUserDto) {
-        const existing = await this.findByEmail(createUserDto.email);
+        const { roleIds, ...userData } = createUserDto;
+        const existing = await this.findByEmail(userData.email);
         if (existing) {
             throw new common_1.ConflictException('Email already exists');
         }
-        const hashedPassword = await bcrypt.hash(createUserDto.password, 10);
-        return this.prisma.user.create({
+        const hashedPassword = await bcrypt.hash(userData.password, 10);
+        const user = await this.prisma.user.create({
             data: {
-                ...createUserDto,
+                ...userData,
                 password: hashedPassword,
+                roles: roleIds ? {
+                    connect: roleIds.map(id => ({ id }))
+                } : undefined,
             },
             select: {
                 id: true,
                 email: true,
-                roles: true,
+                name: true,
+                phone: true,
+                roles: {
+                    select: {
+                        id: true,
+                        name: true,
+                        permissions: {
+                            select: {
+                                id: true,
+                                name: true
+                            }
+                        }
+                    }
+                },
                 createdAt: true,
             },
         });
+        await this.notificationsService.notifyRole('admin', 'New User Registered', `${user.name || user.email} has just joined the platform.`, 'SUCCESS');
+        return user;
     }
     async findByEmail(email) {
         return this.prisma.user.findUnique({
             where: { email },
+            include: {
+                roles: {
+                    include: {
+                        permissions: true
+                    }
+                }
+            }
         });
     }
     findAll() {
@@ -80,7 +109,15 @@ let UsersService = class UsersService {
             select: {
                 id: true,
                 email: true,
-                roles: true,
+                name: true,
+                phone: true,
+                roles: {
+                    select: {
+                        id: true,
+                        name: true,
+                    }
+                },
+                createdAt: true,
             },
         });
     }
@@ -90,32 +127,109 @@ let UsersService = class UsersService {
             select: {
                 id: true,
                 email: true,
-                roles: true,
+                name: true,
+                phone: true,
+                twoFactorEnabled: true,
+                twoFactorSecret: true,
+                roles: {
+                    select: {
+                        id: true,
+                        name: true,
+                        permissions: {
+                            select: {
+                                id: true,
+                                name: true
+                            }
+                        }
+                    }
+                },
             },
         });
     }
     async update(id, updateUserDto) {
-        if (updateUserDto.password) {
-            updateUserDto.password = await bcrypt.hash(updateUserDto.password, 10);
+        const { roleIds, ...userData } = updateUserDto;
+        if (userData.password) {
+            userData.password = await bcrypt.hash(userData.password, 10);
+        }
+        if (roleIds) {
+            const userToUpdate = await this.prisma.user.findUnique({
+                where: { id },
+                include: { roles: true }
+            });
+            const wasAdmin = userToUpdate?.roles.some((r) => r.name === 'admin');
+            const newRoles = await this.prisma.role.findMany({
+                where: { id: { in: roleIds } }
+            });
+            const isStillAdmin = newRoles.some((r) => r.name === 'admin');
+            if (wasAdmin && !isStillAdmin) {
+                const adminsCount = await this.prisma.user.count({
+                    where: { roles: { some: { name: 'admin' } } }
+                });
+                if (adminsCount <= 1) {
+                    throw new common_1.ConflictException('Security Rule: Cannot demote the last system administrator.');
+                }
+            }
         }
         return this.prisma.user.update({
             where: { id },
-            data: updateUserDto,
+            data: {
+                ...userData,
+                roles: roleIds ? {
+                    set: roleIds.map(id => ({ id })),
+                } : undefined,
+            },
             select: {
                 id: true,
                 email: true,
-                roles: true,
+                name: true,
+                phone: true,
+                twoFactorEnabled: true,
+                roles: {
+                    select: {
+                        id: true,
+                        name: true,
+                    }
+                },
                 updatedAt: true,
             },
         });
     }
-    remove(id) {
+    async enable2FA(userId, secret) {
+        return this.prisma.user.update({
+            where: { id: userId },
+            data: {
+                twoFactorSecret: secret,
+                twoFactorEnabled: true,
+            },
+        });
+    }
+    async disable2FA(userId) {
+        return this.prisma.user.update({
+            where: { id: userId },
+            data: {
+                twoFactorSecret: null,
+                twoFactorEnabled: false,
+            },
+        });
+    }
+    async remove(id) {
+        const userToDelete = await this.prisma.user.findUnique({
+            where: { id },
+            include: { roles: true }
+        });
+        if (userToDelete?.roles.some((r) => r.name === 'admin')) {
+            const adminsCount = await this.prisma.user.count({
+                where: { roles: { some: { name: 'admin' } } }
+            });
+            if (adminsCount <= 1) {
+                throw new common_1.ConflictException('Security Rule: Cannot delete the last system administrator.');
+            }
+        }
         return this.prisma.user.delete({
             where: { id },
             select: {
                 id: true,
                 email: true,
-                roles: true,
             },
         });
     }
@@ -123,6 +237,7 @@ let UsersService = class UsersService {
 exports.UsersService = UsersService;
 exports.UsersService = UsersService = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [prisma_service_1.PrismaService])
+    __metadata("design:paramtypes", [prisma_service_1.PrismaService,
+        notifications_service_1.NotificationsService])
 ], UsersService);
 //# sourceMappingURL=users.service.js.map

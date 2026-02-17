@@ -11,6 +11,7 @@ interface User {
     id: string;
     email: string;
     roles: string[];
+    permissions: string[];
     tenantId?: string;
 }
 
@@ -35,11 +36,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (token) {
             try {
                 const decoded: any = jwtDecode(token);
-                // Ensure the decoded token has necessary fields, mapping 'sub' to 'id'
                 setUser({
                     id: decoded.sub,
                     email: decoded.email,
-                    roles: decoded.roles,
+                    roles: decoded.roles || [],
+                    permissions: decoded.permissions || [],
                     tenantId: decoded.tenantId
                 });
             } catch (error) {

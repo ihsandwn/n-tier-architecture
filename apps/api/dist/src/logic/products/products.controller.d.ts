@@ -6,10 +6,10 @@ export declare class ProductsController {
     constructor(productsService: ProductsService);
     create(createProductDto: CreateProductDto): Promise<{
         id: string;
+        name: string;
         tenantId: string;
         createdAt: Date;
         updatedAt: Date;
-        name: string;
         sku: string;
         description: string | null;
         price: number;
@@ -17,17 +17,17 @@ export declare class ProductsController {
     findAll(): import("@prisma/client").Prisma.PrismaPromise<({
         tenant: {
             id: string;
+            name: string;
             createdAt: Date;
             updatedAt: Date;
-            name: string;
             plan: string;
         };
     } & {
         id: string;
+        name: string;
         tenantId: string;
         createdAt: Date;
         updatedAt: Date;
-        name: string;
         sku: string;
         description: string | null;
         price: number;
@@ -35,9 +35,9 @@ export declare class ProductsController {
     findOne(id: string): import("@prisma/client").Prisma.Prisma__ProductClient<({
         tenant: {
             id: string;
+            name: string;
             createdAt: Date;
             updatedAt: Date;
-            name: string;
             plan: string;
         };
         inventory: {
@@ -50,32 +50,45 @@ export declare class ProductsController {
         }[];
     } & {
         id: string;
+        name: string;
         tenantId: string;
         createdAt: Date;
         updatedAt: Date;
-        name: string;
         sku: string;
         description: string | null;
         price: number;
     }) | null, null, import("@prisma/client/runtime/library").DefaultArgs, import("@prisma/client").Prisma.PrismaClientOptions>;
     update(id: string, updateProductDto: UpdateProductDto): import("@prisma/client").Prisma.Prisma__ProductClient<{
         id: string;
+        name: string;
         tenantId: string;
         createdAt: Date;
         updatedAt: Date;
-        name: string;
         sku: string;
         description: string | null;
         price: number;
     }, never, import("@prisma/client/runtime/library").DefaultArgs, import("@prisma/client").Prisma.PrismaClientOptions>;
-    remove(id: string): import("@prisma/client").Prisma.Prisma__ProductClient<{
+    remove(id: string, tenantId: string): Promise<{
         id: string;
+        name: string;
         tenantId: string;
         createdAt: Date;
         updatedAt: Date;
-        name: string;
         sku: string;
         description: string | null;
         price: number;
-    }, never, import("@prisma/client/runtime/library").DefaultArgs, import("@prisma/client").Prisma.PrismaClientOptions>;
+    }>;
+    import(body: {
+        tenantId: string;
+        products: any[];
+    }): Promise<{
+        id: string;
+        name: string;
+        tenantId: string;
+        createdAt: Date;
+        updatedAt: Date;
+        sku: string;
+        description: string | null;
+        price: number;
+    }[]>;
 }

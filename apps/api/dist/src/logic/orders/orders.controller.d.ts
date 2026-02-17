@@ -19,10 +19,10 @@ export declare class OrdersController {
         items: ({
             product: {
                 id: string;
+                name: string;
                 tenantId: string;
                 createdAt: Date;
                 updatedAt: Date;
-                name: string;
                 sku: string;
                 description: string | null;
                 price: number;
@@ -42,36 +42,13 @@ export declare class OrdersController {
         status: string;
     })[]>;
     findOne(req: any, id: string): Promise<{
-        shipment: ({
-            vehicle: {
-                id: string;
-                tenantId: string;
-                type: string;
-                plateNumber: string;
-            } | null;
-            driver: {
-                id: string;
-                tenantId: string;
-                name: string;
-                license: string;
-            } | null;
-        } & {
-            id: string;
-            createdAt: Date;
-            updatedAt: Date;
-            status: string;
-            orderId: string;
-            vehicleId: string | null;
-            driverId: string | null;
-            trackingNumber: string;
-        }) | null;
         items: ({
             product: {
                 id: string;
+                name: string;
                 tenantId: string;
                 createdAt: Date;
                 updatedAt: Date;
-                name: string;
                 sku: string;
                 description: string | null;
                 price: number;
@@ -82,6 +59,29 @@ export declare class OrdersController {
             productId: string;
             orderId: string;
         })[];
+        shipment: ({
+            vehicle: {
+                id: string;
+                tenantId: string;
+                type: string;
+                plateNumber: string;
+            } | null;
+            driver: {
+                id: string;
+                name: string;
+                tenantId: string;
+                license: string;
+            } | null;
+        } & {
+            id: string;
+            createdAt: Date;
+            updatedAt: Date;
+            status: string;
+            trackingNumber: string;
+            orderId: string;
+            vehicleId: string | null;
+            driverId: string | null;
+        }) | null;
     } & {
         id: string;
         tenantId: string;

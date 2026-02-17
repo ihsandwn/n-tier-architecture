@@ -2,10 +2,14 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { PrismaService } from '../../data/prisma/prisma.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderStatusDto, OrderStatus } from './dto/update-order-status.dto';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class OrdersService {
-    constructor(private readonly prisma: PrismaService) { }
+    constructor(
+        private readonly prisma: PrismaService,
+        private readonly notificationsService: NotificationsService
+    ) { }
 
     async create(userId: string, tenantId: string, createOrderDto: CreateOrderDto) {
         console.log('OrdersService.create started', { userId, tenantId });
@@ -82,6 +86,10 @@ export class OrdersService {
                 }
 
                 console.log('Transaction successful');
+
+                // Trigger real-time update
+                this.notificationsService.notifyDataChange(tenantId, 'ORDERS');
+
                 return order;
             });
         } catch (error) {
@@ -182,10 +190,14 @@ export class OrdersService {
             });
         }
 
-        // Normal Status Update
-        return this.prisma.order.update({
+        const updated = await this.prisma.order.update({
             where: { id },
             data: { status }
         });
+
+        // Trigger real-time update
+        this.notificationsService.notifyDataChange(tenantId, 'ORDERS');
+
+        return updated;
     }
 }

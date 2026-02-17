@@ -11,12 +11,13 @@ const common_1 = require("@nestjs/common");
 const inventory_service_1 = require("./inventory.service");
 const inventory_controller_1 = require("./inventory.controller");
 const data_module_1 = require("../../data/data.module");
+const notifications_module_1 = require("../notifications/notifications.module");
 let InventoryModule = class InventoryModule {
 };
 exports.InventoryModule = InventoryModule;
 exports.InventoryModule = InventoryModule = __decorate([
     (0, common_1.Module)({
-        imports: [data_module_1.DataModule],
+        imports: [data_module_1.DataModule, notifications_module_1.NotificationsModule],
         controllers: [inventory_controller_1.InventoryController],
         providers: [inventory_service_1.InventoryService],
         exports: [inventory_service_1.InventoryService],
