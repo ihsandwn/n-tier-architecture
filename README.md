@@ -66,8 +66,25 @@ npm run dev
 > This command uses TurboRepo to launch all apps in parallel.
 
 *   **API:** [http://localhost:3000/api/v1](http://localhost:3000/api/v1)
-*   **Web Dashboard:** [http://localhost:3001](http://localhost:3001) (Login: *admin@example.com / password*)
+*   **Web Dashboard:** [http://localhost:3001](http://localhost:3001)
+    *   **Admin:** `admin@example.com` / `password123`
+    *   **Manager:** `manager@example.com` / `password123`
 *   **Mobile App:** Scan the QR code in your terminal with the **Expo Go** app (Android/iOS).
+
+### Database Seeding
+To reset and seed the database with default users:
+```bash
+cd apps/api
+npx prisma db seed
+```
+
+---
+
+### Packages Directory
+The `packages/` directory is reserved for **Shared Libraries** to be used across apps in the future:
+*   `packages/types` (Planned): Shared TypeScript interfaces & DTOs.
+*   `packages/ui` (Planned): Shared UI components.
+*   `packages/config` (Planned): Shared ESLint/TSConfig settings.
 
 ---
 

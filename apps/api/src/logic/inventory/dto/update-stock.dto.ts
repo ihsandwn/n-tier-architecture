@@ -1,4 +1,10 @@
-import { IsNotEmpty, IsUUID, IsInt, Min } from 'class-validator';
+import { IsNotEmpty, IsUUID, IsInt, Min, IsEnum, IsOptional, IsString } from 'class-validator';
+
+export enum TransactionType {
+    IN = 'IN',
+    OUT = 'OUT',
+    ADJUSTMENT = 'ADJUSTMENT'
+}
 
 export class UpdateStockDto {
     @IsNotEmpty()
@@ -11,6 +17,14 @@ export class UpdateStockDto {
 
     @IsNotEmpty()
     @IsInt()
-    @Min(0)
+    @Min(1)
     quantity: number;
+
+    @IsNotEmpty()
+    @IsEnum(TransactionType)
+    type: TransactionType;
+
+    @IsOptional()
+    @IsString()
+    note?: string;
 }

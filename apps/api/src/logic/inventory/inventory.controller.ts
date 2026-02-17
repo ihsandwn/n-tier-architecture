@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Query, UseGuards, Request } from '@nestjs/common';
 import { InventoryService } from './inventory.service';
 import { UpdateStockDto } from './dto/update-stock.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -13,8 +13,8 @@ export class InventoryController {
 
     @Post('stock')
     @Roles(Role.Admin, Role.Manager)
-    updateStock(@Body() updateStockDto: UpdateStockDto) {
-        return this.inventoryService.updateStock(updateStockDto);
+    updateStock(@Body() updateStockDto: UpdateStockDto, @Request() req: any) {
+        return this.inventoryService.updateStock(req.user.id, req.user.tenantId, updateStockDto);
     }
 
     @Get('warehouse/:warehouseId')

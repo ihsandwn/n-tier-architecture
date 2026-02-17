@@ -18,6 +18,6 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         // We can verify if user exists in DB here via AuthService if needed, 
         // but strict JWT statelessness usually trusts the signature + expiration.
         // Returning an object here attaches it to Request object as req.user
-        return { userId: payload.sub, email: payload.email, roles: payload.roles };
+        return { userId: payload.sub, email: payload.email, roles: payload.roles, tenantId: payload.tenantId, id: payload.sub };
     }
 }

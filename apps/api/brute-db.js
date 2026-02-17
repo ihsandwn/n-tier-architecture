@@ -1,7 +1,7 @@
 const { Client } = require('pg');
 
 const creds = [
-    { user: 'postgres', password: '12345', db: 'erp_pwa' }
+    { user: 'postgres', password: '12345', db: 'pwa' }
 ];
 
 async function test() {

@@ -1,80 +1,32 @@
 'use client';
 
 import { useAuth } from '@/context/auth-context';
-import { LayoutDashboard, Users, Warehouse, Package, Box, LogOut } from 'lucide-react';
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import clsx from 'clsx';
+import DashboardSidebar from '@/components/dashboard/dashboard-sidebar';
+import DashboardNavbar from '@/components/dashboard/dashboard-navbar';
 
-const navItems = [
-    { name: 'Overview', href: '/dashboard', icon: LayoutDashboard },
-    { name: 'Tenants', href: '/dashboard/tenants', icon: Users, roles: ['admin'] },
-    { name: 'Warehouses', href: '/dashboard/warehouses', icon: Warehouse },
-    { name: 'Products', href: '/dashboard/products', icon: Package },
-    { name: 'Inventory', href: '/dashboard/inventory', icon: Box },
-];
+import { useSidebar } from '@/context/sidebar-context';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-    const { user, logout } = useAuth();
-    const pathname = usePathname();
+    const { user } = useAuth();
+    const { isCollapsed } = useSidebar();
 
-    if (!user) return null; // Or loading spinner
+    if (!user) return null;
 
     return (
-        <div className="flex h-screen bg-gray-100">
+        <div className="min-h-screen bg-gray-50 dark:bg-gray-950 font-sans selection:bg-blue-500 selection:text-white">
             {/* Sidebar */}
-            <aside className="w-64 bg-white shadow-md flex flex-col">
-                <div className="p-6">
-                    <h1 className="text-2xl font-bold text-blue-600">OmniLogistics</h1>
-                    <p className="text-xs text-gray-500 mt-1">Enterprise ERP</p>
+            <DashboardSidebar />
+
+            {/* Navbar */}
+            <DashboardNavbar />
+
+            {/* Main Content Area */}
+            <main
+                className={`pt-20 pb-12 px-4 md:px-8 min-h-screen transition-all duration-300 ${isCollapsed ? 'lg:ml-[80px]' : 'lg:ml-[280px]'}`}
+            >
+                <div className="max-w-7xl mx-auto space-y-6">
+                    {children}
                 </div>
-
-                <nav className="flex-1 px-4 space-y-2">
-                    {navItems.map((item) => {
-                        if (item.roles && !item.roles.some(r => user.roles.includes(r))) return null;
-
-                        const isActive = pathname === item.href;
-                        return (
-                            <Link
-                                key={item.href}
-                                href={item.href}
-                                className={clsx(
-                                    'flex items-center px-4 py-2 rounded-lg text-sm font-medium transition-colors',
-                                    isActive
-                                        ? 'bg-blue-50 text-blue-700'
-                                        : 'text-gray-700 hover:bg-gray-100'
-                                )}
-                            >
-                                <item.icon className="w-5 h-5 mr-3" />
-                                {item.name}
-                            </Link>
-                        );
-                    })}
-                </nav>
-
-                <div className="p-4 border-t">
-                    <div className="flex items-center mb-4">
-                        <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold">
-                            {user.email[0].toUpperCase()}
-                        </div>
-                        <div className="ml-3">
-                            <p className="text-sm font-medium text-gray-900 truncate w-32">{user.email}</p>
-                            <p className="text-xs text-gray-500 capitalize">{user.roles.join(', ')}</p>
-                        </div>
-                    </div>
-                    <button
-                        onClick={logout}
-                        className="w-full flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg"
-                    >
-                        <LogOut className="w-5 h-5 mr-3" />
-                        Sign Out
-                    </button>
-                </div>
-            </aside>
-
-            {/* Main Content */}
-            <main className="flex-1 overflow-auto p-8">
-                {children}
             </main>
         </div>
     );

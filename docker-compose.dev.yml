@@ -8,7 +8,7 @@ services:
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: 12345
-      POSTGRES_DB: erp_pwa
+      POSTGRES_DB: pwa
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
