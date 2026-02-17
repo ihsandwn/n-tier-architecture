@@ -1,0 +1,20 @@
+FROM postgres:15-alpine
+
+# Install dcron for scheduling and bash
+RUN apk add --no-cache \
+    dcron \
+    bash \
+    curl
+
+# Copy backup script
+COPY scripts/backup-db.sh /usr/local/bin/backup-db.sh
+RUN chmod +x /usr/local/bin/backup-db.sh
+
+# Create backups directory
+RUN mkdir -p /backups
+
+# Create cron job to run backup daily at 1AM
+RUN echo "0 1 * * * /usr/local/bin/backup-db.sh >> /var/log/backup.log 2>&1" | crontab -
+
+# Start crond in foreground
+CMD ["crond", "-f", "-l", "2"]

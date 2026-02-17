@@ -21,6 +21,30 @@ services:
     networks:
       - backend
 
+  # --- Database Backup Service ---
+  db-backup:
+    build:
+      context: .
+      dockerfile: Dockerfile.backup
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-admin123}
+      POSTGRES_DB: ${POSTGRES_DB:-omni_logistics}
+      POSTGRES_HOST: postgres
+    volumes:
+      - postgres_backups:/backups
+      - ./scripts/backup-db.sh:/usr/local/bin/backup-db.sh:ro
+    depends_on:
+      - postgres
+    networks:
+      - backend
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
   # --- Application Layer ---
   api:
     build:
@@ -68,6 +92,7 @@ services:
 
 volumes:
   postgres_data:
+  postgres_backups:
   redis_data:
 
 

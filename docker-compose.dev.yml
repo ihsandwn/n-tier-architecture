@@ -15,6 +15,31 @@ services:
       - omni-network
     restart: always
 
+  # Tier 3: Database Backup Service
+  db-backup:
+    build:
+      context: .
+      dockerfile: Dockerfile.backup
+    container_name: omni_db_backup
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 12345
+      POSTGRES_DB: pwa
+      POSTGRES_HOST: postgres
+    volumes:
+      - postgres_backups:/backups
+      - ./scripts/backup-db.sh:/usr/local/bin/backup-db.sh:ro
+    depends_on:
+      - postgres
+    networks:
+      - omni-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
   # Tier 3: Cache
   redis:
     image: redis:7-alpine
@@ -66,6 +91,7 @@ networks:
 
 volumes:
   postgres_data:
+  postgres_backups:
   redis_data:
   rabbitmq_data:
   minio_data:
