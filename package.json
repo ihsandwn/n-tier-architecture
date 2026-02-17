@@ -1,0 +1,28 @@
+{
+    "name": "n-tier-architecture",
+    "private": true,
+    "scripts": {
+        "build": "turbo run build",
+        "dev": "turbo run dev --parallel",
+        "lint": "turbo run lint",
+        "test": "turbo run test",
+        "format": "prettier --write \"**/*.{ts,tsx,md}\""
+    },
+    "devDependencies": {
+        "prettier": "latest",
+        "prisma": "6.19.2",
+        "turbo": "latest"
+    },
+    "engines": {
+        "node": ">=18"
+    },
+    "workspaces": [
+        "apps/*",
+        "packages/*"
+    ],
+    "dependencies": {
+        "@prisma/client": "^6.19.2",
+        "xlsx": "^0.18.5"
+    },
+    "packageManager": "npm@11.6.4"
+}

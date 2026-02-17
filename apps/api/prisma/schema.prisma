@@ -1,0 +1,277 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// --- Identity & Tenancy ---
+
+model Tenant {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String
+  plan      String   @default("free") // free, pro, enterprise
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users      User[]
+  warehouses Warehouse[]
+  products   Product[]
+  orders     Order[]
+  vehicles   Vehicle[]
+  drivers    Driver[]
+  inventoryTransactions InventoryTransaction[]
+
+  @@map("tenants")
+}
+
+// Extend existing User model
+model User {
+  id           String   @id @default(uuid()) @db.Uuid
+  email        String   @unique
+  password     String
+  refreshToken String?
+  // Profile Information
+  name             String?
+  phone            String?
+  
+  // Security
+  twoFactorEnabled Boolean  @default(false)
+  twoFactorSecret  String?
+
+  tenantId     String?  @db.Uuid
+  tenant       Tenant?  @relation(fields: [tenantId], references: [id])
+
+  // RBAC
+  roles        Role[]   @relation("UserRoles")
+
+  notifications Notification[]
+  transactions InventoryTransaction[]
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([tenantId])
+  @@map("users")
+}
+
+model Role {
+  id          String       @id @default(uuid()) @db.Uuid
+  name        String       @unique
+  description String?
+  
+  permissions Permission[] @relation("RolePermissions")
+  users       User[]       @relation("UserRoles")
+
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@map("roles")
+}
+
+model Permission {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String   @unique // e.g., "users:read", "inventory:write"
+  description String?
+  
+  roles       Role[]   @relation("RolePermissions")
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("permissions")
+}
+
+// --- Logistics Core ---
+
+model Warehouse {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String
+  location  String
+  lat       Float?
+  lng       Float?
+  capacity  Int      @default(0)
+  
+  tenantId  String   @db.Uuid
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  
+  inventory Inventory[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tenantId])
+  @@map("warehouses")
+}
+
+model Product {
+  id          String   @id @default(uuid()) @db.Uuid
+  sku         String   
+  name        String
+  description String?
+  price       Float    @default(0.0)
+  
+  tenantId    String   @db.Uuid
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+  
+  inventory   Inventory[]
+  orderItems  OrderItem[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([tenantId])
+  @@unique([tenantId, sku]) // Unique SKU per tenant
+  @@map("products")
+}
+
+model Inventory {
+  id          String    @id @default(uuid()) @db.Uuid
+  quantity    Int
+  
+  warehouseId String    @db.Uuid
+  warehouse   Warehouse @relation(fields: [warehouseId], references: [id])
+  
+  productId   String    @db.Uuid
+  product     Product   @relation(fields: [productId], references: [id])
+
+  tenantId    String?   @db.Uuid
+  
+  transactions InventoryTransaction[]
+
+  updatedAt   DateTime  @updatedAt
+
+  @@index([tenantId])
+  @@index([warehouseId])
+  @@index([productId])
+  @@unique([warehouseId, productId])
+  @@map("inventory")
+}
+
+model InventoryTransaction {
+  id          String   @id @default(uuid()) @db.Uuid
+  type        String   // IN, OUT, ADJUSTMENT
+  quantity    Int
+  note        String?
+
+  inventoryId String    @db.Uuid
+  inventory   Inventory @relation(fields: [inventoryId], references: [id])
+  
+  userId      String   @db.Uuid
+  user        User     @relation(fields: [userId], references: [id])
+
+  tenantId    String   @db.Uuid
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+
+  createdAt   DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([inventoryId])
+  @@index([userId])
+  @@map("inventory_transactions")
+}
+
+// --- Operations ---
+
+model Order {
+  id           String      @id @default(uuid()) @db.Uuid
+  customerName String
+  status       String      @default("pending") // pending, processing, shipped, delivered
+  
+  tenantId     String      @db.Uuid
+  tenant       Tenant      @relation(fields: [tenantId], references: [id])
+  
+  items        OrderItem[]
+  shipment     Shipment?
+
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  @@index([tenantId])
+  @@map("orders")
+}
+
+model OrderItem {
+  id        String  @id @default(uuid()) @db.Uuid
+  quantity  Int
+  
+  orderId   String  @db.Uuid
+  order     Order   @relation(fields: [orderId], references: [id])
+  
+  productId String  @db.Uuid
+  product   Product @relation(fields: [productId], references: [id])
+
+  @@index([orderId])
+  @@index([productId])
+  @@map("order_items")
+}
+
+model Shipment {
+  id             String   @id @default(uuid()) @db.Uuid
+  trackingNumber String   @unique
+  status         String   @default("assigned") // assigned, in_transit, delivered
+  
+  orderId        String   @unique @db.Uuid
+  order          Order    @relation(fields: [orderId], references: [id])
+  
+  vehicleId      String?  @db.Uuid
+  vehicle        Vehicle? @relation(fields: [vehicleId], references: [id])
+  
+  driverId       String?  @db.Uuid
+  driver         Driver?  @relation(fields: [driverId], references: [id])
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([orderId])
+  @@index([vehicleId])
+  @@index([driverId])
+  @@map("shipments")
+}
+
+// --- Fleet ---
+
+model Vehicle {
+  id           String     @id @default(uuid()) @db.Uuid
+  plateNumber  String
+  type         String     // truck, van, bike
+  
+  tenantId     String     @db.Uuid
+  tenant       Tenant     @relation(fields: [tenantId], references: [id])
+  
+  shipments    Shipment[]
+
+  @@index([tenantId])
+  @@map("vehicles")
+}
+
+model Driver {
+  id           String     @id @default(uuid()) @db.Uuid
+  name         String
+  license      String
+  
+  tenantId     String     @db.Uuid
+  tenant       Tenant     @relation(fields: [tenantId], references: [id])
+  
+  shipments    Shipment[]
+
+  @@index([tenantId])
+  @@map("drivers")
+}
+
+model Notification {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  user      User     @relation(fields: [userId], references: [id])
+  type      String   // INFO, WARNING, SUCCESS, ERROR
+  title     String
+  message   String
+  isRead    Boolean  @default(false)
+  link      String?  // Optional navigation target
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@map("notifications")
+}

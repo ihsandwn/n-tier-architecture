@@ -1,0 +1,71 @@
+services:
+  # Tier 3: Data Persistence
+  postgres:
+    image: postgres:16-alpine
+    container_name: omni_postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 12345
+      POSTGRES_DB: pwa
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - omni-network
+    restart: always
+
+  # Tier 3: Cache
+  redis:
+    image: redis:7-alpine
+    container_name: omni_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - omni-network
+    restart: always
+
+  # Tier 2/3: Messaging
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: omni_rabbitmq
+    ports:
+      - "5672:5672" # AMQP protocol
+      - "15672:15672" # Management UI
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - omni-network
+    restart: always
+
+  # Tier 3: Object Storage (MinIO) - S3 Compatible
+  minio:
+    image: minio/minio:latest
+    container_name: omni_minio
+    ports:
+      - "9000:9000" # API
+      - "9001:9001" # Console
+    environment:
+      MINIO_ROOT_USER: minio_admin
+      MINIO_ROOT_PASSWORD: minio_password
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio_data:/data
+    networks:
+      - omni-network
+    restart: always
+
+networks:
+  omni-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
+  rabbitmq_data:
+  minio_data:
