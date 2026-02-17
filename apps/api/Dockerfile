@@ -1,10 +1,10 @@
-FROM node:18-alpine AS builder
+FROM node:22-alpine AS builder
 
 # Set working directory
 WORKDIR /app
 
-# Enable corepack for pnpm/yarn (if needed, but we use npm here)
-# RUN corepack enable
+# Install build dependencies
+RUN apk add --no-cache python3 make g++
 
 # Copy root package.json and lockfile
 COPY package.json package-lock.json turbo.json ./
@@ -29,8 +29,11 @@ WORKDIR /app
 RUN npx turbo run build --filter=api...
 
 # --- Production Stage ---
-FROM node:18-alpine AS runner
+FROM node:22-alpine AS runner
 WORKDIR /app
+
+# Install runtime dependencies
+RUN apk add --no-cache dumb-init netcat-openbsd bash
 
 # Don't run as root
 RUN addgroup --system --gid 1001 nodejs
@@ -49,6 +52,10 @@ COPY --from=builder /app/apps/api/prisma ./apps/api/prisma
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 
+# Copy entrypoint script
+COPY scripts/docker-entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
 # Set env to production
 ENV NODE_ENV production
 
@@ -58,5 +65,6 @@ USER nestjs
 # Expose port
 EXPOSE 3000
 
-# Start command
+# Start with entrypoint script
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 CMD ["node", "apps/api/dist/src/main.js"]
