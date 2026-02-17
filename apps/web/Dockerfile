@@ -1,4 +1,4 @@
-FROM node:18-alpine AS base
+FROM node:22-alpine AS base
 
 # Install dependencies only when needed
 FROM base AS deps
@@ -34,6 +34,9 @@ RUN npx turbo run build --filter=web...
 FROM base AS runner
 WORKDIR /app
 
+# Install runtime dependencies
+RUN apk add --no-cache dumb-init wget
+
 ENV NODE_ENV production
 # Uncomment the following line in case you want to disable telemetry during runtime.
 # ENV NEXT_TELEMETRY_DISABLED 1
@@ -57,4 +60,5 @@ ENV PORT 3000
 # set hostname to localhost
 ENV HOSTNAME "0.0.0.0"
 
+ENTRYPOINT ["dumb-init", "--"]
 CMD ["node", "apps/web/server.js"]
